@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>লিডারবোর্ড | Exam - MAHIN'S CLASSROOM</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<header class="topnav">
+  <div class="topnav-inner">
+    <a href="index.html" class="brand">
+      <span class="brand-mark">MC</span>
+      <span class="brand-text"><b>MAHIN'S CLASSROOM</b><span>Exam</span></span>
+    </a>
+    <button class="nav-toggle" data-nav-toggle aria-label="মেনু">☰</button>
+    <nav class="nav-links" data-nav-links>
+      <a href="index.html">হোম</a>
+      <a href="dashboard.html">পরীক্ষাসমূহ</a>
+      <a href="leaderboard.html">লিডারবোর্ড</a>
+      <a href="profile.html">প্রোফাইল</a>
+      <a href="admin.html" data-nav-admin style="display:none">অ্যাডমিন</a>
+    </nav>
+    <div data-nav-guest><a href="login.html" class="nav-btn">লগইন</a></div>
+    <div data-nav-user class="nav-user" style="display:none">
+      <img data-nav-avatar alt="">
+      <button class="nav-btn" data-nav-logout>লগআউট</button>
+    </div>
+  </div>
+</header>
+
+<main class="shell-narrow" style="padding:30px 20px 70px;">
+  <div class="page-head">
+    <h1>লিডারবোর্ড</h1>
+    <p>একটি পরীক্ষা বেছে নিয়ে সেরা স্কোরারদের দেখো।</p>
+  </div>
+
+  <div class="field">
+    <select id="examSelect"></select>
+  </div>
+
+  <div class="flex-between" style="margin-bottom:10px;">
+    <span class="small-note">শীর্ষ ২০ জন দেখানো হচ্ছে</span>
+    <button class="btn btn-outline btn-sm" id="refreshBtn">🔄 রিফ্রেশ</button>
+  </div>
+
+  <div id="lbList"></div>
+</main>
+
+<footer class="site-footer"><p>©MAHIN'S CLASSROOM</p></footer>
+
+<script type="module">
+  import { db, doc, getDoc, collection, getDocs, query, where, orderBy, limit } from "./assets/js/firebase-init.js";
+  import { guardPage } from "./assets/js/auth.js";
+  import { Cache } from "./assets/js/cache.js";
+
+  const { user } = await guardPage({ needAuth: true, needProfile: true });
+  if (!user) throw new Error("redirecting");
+
+  const select = document.getElementById("examSelect");
+  const lbList = document.getElementById("lbList");
+  const params = new URLSearchParams(location.search);
+  const preselect = params.get("examId");
+
+  async function loadExamOptions() {
+    let list = Cache.get("examsIndex");
+    if (!list) {
+      const snap = await getDoc(doc(db, "meta", "examsIndex"));
+      list = snap.exists() ? (snap.data().exams || []) : [];
+      Cache.set("examsIndex", list);
+    }
+    if (!list.length) {
+      select.innerHTML = `<option value="">কোনো পরীক্ষা নেই</option>`;
+      lbList.innerHTML = `<div class="empty-state"><div class="ico">📭</div><p>এখনো কোনো পরীক্ষা নেই।</p></div>`;
+      return;
+    }
+    select.innerHTML = list.map(ex => `<option value="${ex.id}">${escapeHtml(ex.title)}</option>`).join("");
+    if (preselect && list.some(e => e.id === preselect)) select.value = preselect;
+    loadLeaderboard(select.value);
+  }
+
+  async function loadLeaderboard(examId, force = false) {
+    if (!examId) return;
+    const key = "leaderboard_" + examId;
+    let rows = force ? null : Cache.get(key);
+    if (!rows) {
+      lbList.innerHTML = `<div class="loader"><span class="spinner"></span> লোড হচ্ছে...</div>`;
+      const q = query(collection(db, "results"), where("examId", "==", examId), orderBy("score", "desc"), limit(20));
+      const snap = await getDocs(q);
+      rows = snap.docs.map(d => d.data());
+      Cache.set(key, rows);
+    }
+    renderRows(rows);
+  }
+
+  function renderRows(rows) {
+    if (!rows.length) {
+      lbList.innerHTML = `<div class="empty-state"><div class="ico">🏆</div><p>এখনো কেউ এই পরীক্ষাটি দেয়নি।</p></div>`;
+      return;
+    }
+    lbList.innerHTML = rows.map((r, i) => `
+      <div class="lb-row ${i === 0 ? "top1" : i === 1 ? "top2" : i === 2 ? "top3" : ""}">
+        <div class="lb-rank">${i + 1}</div>
+        <div class="lb-name">${escapeHtml(r.userName || "শিক্ষার্থী")}</div>
+        <div class="lb-score">${r.score}/${r.total}</div>
+      </div>
+    `).join("");
+  }
+
+  select.addEventListener("change", () => loadLeaderboard(select.value));
+  document.getElementById("refreshBtn").addEventListener("click", () => {
+    if (select.value) { Cache.remove("leaderboard_" + select.value); loadLeaderboard(select.value, true); }
+  });
+
+  function escapeHtml(s){ const d=document.createElement("div"); d.textContent = s||""; return d.innerHTML; }
+
+  loadExamOptions();
+</script>
+</body>
+</html>

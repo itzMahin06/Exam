@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>পরীক্ষাসমূহ | Exam - MAHIN'S CLASSROOM</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<header class="topnav">
+  <div class="topnav-inner">
+    <a href="index.html" class="brand">
+      <span class="brand-mark">MC</span>
+      <span class="brand-text"><b>MAHIN'S CLASSROOM</b><span>Exam</span></span>
+    </a>
+    <button class="nav-toggle" data-nav-toggle aria-label="মেনু">☰</button>
+    <nav class="nav-links" data-nav-links>
+      <a href="index.html">হোম</a>
+      <a href="dashboard.html">পরীক্ষাসমূহ</a>
+      <a href="leaderboard.html">লিডারবোর্ড</a>
+      <a href="profile.html">প্রোফাইল</a>
+      <a href="admin.html" data-nav-admin style="display:none">অ্যাডমিন</a>
+    </nav>
+    <div data-nav-guest><a href="login.html" class="nav-btn">লগইন</a></div>
+    <div data-nav-user class="nav-user" style="display:none">
+      <img data-nav-avatar alt="">
+      <button class="nav-btn" data-nav-logout>লগআউট</button>
+    </div>
+  </div>
+</header>
+
+<main class="shell" style="padding-bottom:70px;">
+  <div class="page-head flex-between">
+    <div>
+      <h1>পরীক্ষাসমূহ</h1>
+      <p>যে পরীক্ষাটি দিতে চাও সেটি বেছে নাও।</p>
+    </div>
+    <button class="btn btn-outline btn-sm" id="refreshBtn">🔄 রিফ্রেশ</button>
+  </div>
+
+  <div id="examList" class="exam-list"></div>
+
+  <div class="page-head" style="margin-top:40px;">
+    <h1 style="font-size:20px;">আমার সাম্প্রতিক ফলাফল</h1>
+  </div>
+  <div id="myResults"></div>
+</main>
+
+<footer class="site-footer"><p>©MAHIN'S CLASSROOM</p></footer>
+
+<div class="modal-backdrop" id="promptBackdrop">
+  <div class="nav-popup center" style="max-width:340px;">
+    <p style="margin-bottom:16px;">এই পরীক্ষাটি শুরু করার পর মাঝপথে থামা যাবে না। প্রস্তুত?</p>
+    <div style="display:flex; gap:10px; justify-content:center;">
+      <button class="btn btn-outline btn-sm" id="promptCancel">না</button>
+      <button class="btn btn-primary btn-sm" id="promptOk">হ্যাঁ, শুরু করো</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { db, collection, getDocs, doc, getDoc, query, where, orderBy, limit } from "./assets/js/firebase-init.js";
+  import { guardPage } from "./assets/js/auth.js";
+  import { Cache } from "./assets/js/cache.js";
+
+  const { user, profile } = await guardPage({ needAuth: true, needProfile: true });
+  if (!user) throw new Error("redirecting");
+
+  const examListEl = document.getElementById("examList");
+  const myResultsEl = document.getElementById("myResults");
+
+  async function loadExamIndex(force = false) {
+    const key = "examsIndex";
+    let list = force ? null : Cache.get(key);
+    if (!list) {
+      examListEl.innerHTML = `<div class="loader"><span class="spinner"></span> লোড হচ্ছে...</div>`;
+      const snap = await getDoc(doc(db, "meta", "examsIndex"));
+      list = snap.exists() ? (snap.data().exams || []) : [];
+      Cache.set(key, list);
+    }
+    renderExams(list);
+  }
+
+  function renderExams(list) {
+    if (!list.length) {
+      examListEl.innerHTML = `<div class="empty-state"><div class="ico">📭</div><p>এখনো কোনো পরীক্ষা যোগ করা হয়নি। শীঘ্রই আসছে!</p></div>`;
+      return;
+    }
+    examListEl.innerHTML = list.map(ex => `
+      <div class="exam-item">
+        <div>
+          <h3>${escapeHtml(ex.title)}</h3>
+          <div class="exam-meta">
+            <span>❓ ${ex.totalQuestions || 0} টি প্রশ্ন</span>
+            <span>⏱️ ${ex.duration || 0} মিনিট</span>
+            ${ex.subject ? `<span class="chip">${escapeHtml(ex.subject)}</span>` : ""}
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm start-btn" data-id="${ex.id}">পরীক্ষা শুরু করো</button>
+      </div>
+    `).join("");
+
+    document.querySelectorAll(".start-btn").forEach(btn => {
+      btn.addEventListener("click", () => confirmStart(btn.dataset.id));
+    });
+  }
+
+  let pendingExamId = null;
+  const backdrop = document.getElementById("promptBackdrop");
+  function confirmStart(id) {
+    pendingExamId = id;
+    backdrop.classList.add("open");
+  }
+  document.getElementById("promptCancel").addEventListener("click", () => backdrop.classList.remove("open"));
+  document.getElementById("promptOk").addEventListener("click", () => {
+    location.href = `exam.html?id=${encodeURIComponent(pendingExamId)}`;
+  });
+
+  document.getElementById("refreshBtn").addEventListener("click", () => {
+    Cache.remove("examsIndex");
+    Cache.remove("myresults_" + user.uid);
+    loadExamIndex(true);
+    loadMyResults(true);
+  });
+
+  async function loadMyResults(force = false) {
+    const key = "myresults_" + user.uid;
+    let results = force ? null : Cache.get(key);
+    if (!results) {
+      myResultsEl.innerHTML = `<div class="loader"><span class="spinner"></span> লোড হচ্ছে...</div>`;
+      const q = query(collection(db, "results"), where("uid", "==", user.uid), orderBy("timestamp", "desc"), limit(10));
+      const snap = await getDocs(q);
+      results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      Cache.set(key, results);
+    }
+    if (!results.length) {
+      myResultsEl.innerHTML = `<div class="empty-state"><div class="ico">🗂️</div><p>এখনো কোনো পরীক্ষা দাওনি।</p></div>`;
+      return;
+    }
+    myResultsEl.innerHTML = `<div class="exam-list">` + results.map(r => `
+      <div class="exam-item">
+        <div>
+          <h3>${escapeHtml(r.examTitle || "পরীক্ষা")}</h3>
+          <div class="exam-meta">
+            <span>✅ ${r.correct}</span><span>❌ ${r.wrong}</span><span>➖ ${r.unanswered}</span>
+          </div>
+        </div>
+        <span class="chip">স্কোর: ${r.score}</span>
+      </div>
+    `).join("") + `</div>`;
+  }
+
+  function escapeHtml(s){ const d=document.createElement("div"); d.textContent = s||""; return d.innerHTML; }
+
+  loadExamIndex();
+  loadMyResults();
+</script>
+</body>
+</html>

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>অ্যাডমিন | Exam - MAHIN'S CLASSROOM</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<header class="topnav">
+  <div class="topnav-inner">
+    <a href="index.html" class="brand">
+      <span class="brand-mark">MC</span>
+      <span class="brand-text"><b>MAHIN'S CLASSROOM</b><span>Exam</span></span>
+    </a>
+    <button class="nav-toggle" data-nav-toggle aria-label="মেনু">☰</button>
+    <nav class="nav-links" data-nav-links>
+      <a href="index.html">হোম</a>
+      <a href="dashboard.html">পরীক্ষাসমূহ</a>
+      <a href="leaderboard.html">লিডারবোর্ড</a>
+      <a href="profile.html">প্রোফাইল</a>
+      <a href="admin.html" data-nav-admin class="active" style="display:none">অ্যাডমিন</a>
+    </nav>
+    <div data-nav-guest><a href="login.html" class="nav-btn">লগইন</a></div>
+    <div data-nav-user class="nav-user" style="display:none">
+      <img data-nav-avatar alt="">
+      <button class="nav-btn" data-nav-logout>লগআউট</button>
+    </div>
+  </div>
+</header>
+
+<main class="shell" style="padding:30px 20px 70px;">
+  <div class="page-head">
+    <h1>অ্যাডমিন প্যানেল</h1>
+    <p>পরীক্ষা আপলোড করো এবং শিক্ষার্থীদের তালিকা পরিচালনা করো।</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="upload">পরীক্ষা আপলোড</button>
+    <button class="tab-btn" data-tab="exams">পরীক্ষা পরিচালনা</button>
+    <button class="tab-btn" data-tab="users">শিক্ষার্থী তালিকা</button>
+  </div>
+
+  <!-- Upload tab -->
+  <section class="tab-panel active" id="tab-upload">
+    <div id="uploadBanner"></div>
+    <form id="uploadForm" class="card" style="max-width:560px;">
+      <div class="field">
+        <label>পরীক্ষার নাম</label>
+        <input type="text" id="exTitle" placeholder="যেমন: Final Model Test - 14" required>
+      </div>
+      <div class="field">
+        <label>বিষয় (ঐচ্ছিক)</label>
+        <input type="text" id="exSubject" placeholder="যেমন: জীববিজ্ঞান">
+      </div>
+      <div class="field">
+        <label>সময়সীমা (মিনিট)</label>
+        <input type="number" id="exDuration" value="60" min="1" required>
+      </div>
+      <div class="field">
+        <label>প্রশ্নের ফাইল</label>
+        <input type="file" id="exFile" accept="application/json" required>
+        <p class="small-note" style="margin-top:6px;">
+          প্রতিটি প্রশ্নে থাকতে হবে: question, options (A,B,C,D), correct_answer, explanation, uddipok (ঐচ্ছিক)।
+        </p>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" id="uploadBtn">পরীক্ষা যোগ করো</button>
+    </form>
+  </section>
+
+  <!-- Manage exams tab -->
+  <section class="tab-panel" id="tab-exams">
+    <div class="flex-between" style="margin-bottom:12px;">
+      <span class="small-note">সব পরীক্ষার তালিকা</span>
+      <button class="btn btn-outline btn-sm" id="examsRefreshBtn">🔄 রিফ্রেশ</button>
+    </div>
+    <div id="examsAdminList"></div>
+  </section>
+
+  <!-- Manage users tab -->
+  <section class="tab-panel" id="tab-users">
+    <div class="flex-between" style="margin-bottom:12px;">
+      <span class="small-note">সব ব্যবহারকারীর তালিকা</span>
+      <button class="btn btn-outline btn-sm" id="usersRefreshBtn">🔄 রিফ্রেশ</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>নাম</th><th>ইমেইল</th><th>ব্যাচ</th><th>সেকেন্ড টাইমার</th>
+            <th>প্রস্তুতি</th><th>ভূমিকা</th><th>অবস্থা</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<div class="modal-backdrop" id="editUserBackdrop">
+  <div class="nav-popup" style="max-width:420px;">
+    <div class="nav-popup-head">
+      <h3>ব্যবহারকারী সম্পাদনা</h3>
+      <button class="nav-popup-close" id="editUserClose">✕</button>
+    </div>
+    <div id="editUserName" class="small-note" style="margin-bottom:14px;"></div>
+    <div class="field">
+      <label>এইচএসসি ব্যাচ</label>
+      <select id="editBatch">
+        <option value="">নির্বাচন করো</option>
+        <option>HSC 2024</option><option>HSC 2025</option><option>HSC 2026</option>
+        <option>HSC 2027</option><option>Admission Candidate</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>সেকেন্ড টাইমার</label>
+      <select id="editSecondTimer">
+        <option value="">--</option><option value="yes">হ্যাঁ</option><option value="no">না</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>প্রস্তুতি</label>
+      <select id="editPreparedFor">
+        <option value="">--</option>
+        <option value="engineering">ইঞ্জিনিয়ারিং</option>
+        <option value="varsity">ভার্সিটি</option>
+        <option value="medical">মেডিকেল</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>ভূমিকা</label>
+      <select id="editRole">
+        <option value="student">student</option>
+        <option value="admin">admin</option>
+      </select>
+    </div>
+    <div class="field">
+      <label class="radio-pill" style="display:inline-flex; align-items:center; gap:8px;">
+        <input type="checkbox" id="editDisabled" style="display:inline-block; width:auto;"> অ্যাকাউন্ট নিষ্ক্রিয় করো
+      </label>
+    </div>
+    <button class="btn btn-primary btn-block" id="editSaveBtn">সংরক্ষণ করো</button>
+  </div>
+</div>
+
+<footer class="site-footer"><p>©MAHIN'S CLASSROOM</p></footer>
+
+<script type="module" src="assets/js/admin.js"></script>
+</body>
+</html>
