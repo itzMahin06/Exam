@@ -364,6 +364,63 @@ img{ max-width:100%; display:block; }
 .lb-name{ flex:1; font-weight:600; }
 .lb-score{ font-family:var(--font-en); font-weight:700; color:var(--green-deep); }
 
+/* ---------- courses ---------- */
+.course-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+@media (max-width:900px){ .course-grid{ grid-template-columns:repeat(2,1fr); } }
+@media (max-width:620px){ .course-grid{ grid-template-columns:1fr; } }
+.course-card{
+  background:var(--card); border:1px solid var(--border); border-radius:var(--radius-md);
+  overflow:hidden; display:flex; flex-direction:column; transition:transform .15s, box-shadow .15s;
+}
+.course-card:hover{ transform:translateY(-3px); box-shadow:var(--shadow-card); }
+.course-banner{
+  aspect-ratio:16/9; width:100%; background:var(--paper-deep) url('') center/cover no-repeat;
+  position:relative; overflow:hidden;
+}
+.course-banner img{ width:100%; height:100%; object-fit:cover; }
+.course-banner .cat-badge{
+  position:absolute; top:10px; left:10px; font-family:var(--font-en); font-size:11.5px; font-weight:700;
+  padding:4px 10px; border-radius:999px; background:rgba(11,79,63,.9); color:#fff; text-transform:uppercase; letter-spacing:.4px;
+}
+.course-banner .cat-badge.free{ background:var(--amber); color:var(--green-deep); }
+.course-card-body{ padding:16px; display:flex; flex-direction:column; gap:8px; flex:1; }
+.course-card-body h3{ font-size:16.5px; margin:0; }
+.course-card-body p{ font-size:13.5px; margin:0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.course-price-row{ display:flex; align-items:center; justify-content:space-between; margin-top:auto; padding-top:10px; }
+.price-tag{ font-family:var(--font-en); font-weight:800; font-size:16px; color:var(--green-deep); }
+.price-tag.free{ color:var(--amber); }
+
+.course-hero-banner{ aspect-ratio:16/9; width:100%; border-radius:var(--radius-lg); overflow:hidden; background:var(--paper-deep); margin-bottom:20px; }
+.course-hero-banner img{ width:100%; height:100%; object-fit:cover; }
+
+.access-badge{ display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:999px; font-size:13px; font-weight:600; }
+.access-badge.approved{ background:var(--correct-soft); color:var(--correct); }
+.access-badge.pending{ background:var(--amber-soft); color:#8A5D0F; }
+.access-badge.declined{ background:var(--wrong-soft); color:var(--wrong); }
+.access-badge.locked{ background:var(--paper-deep); color:var(--ink-soft); }
+
+.lock-row{
+  display:flex; align-items:center; justify-content:space-between; gap:14px;
+  background:var(--card); border:1px solid var(--border); border-radius:var(--radius-md);
+  padding:16px 18px; margin-bottom:10px; opacity:.75;
+}
+
+.pay-box{
+  background:var(--green-soft); border:1.5px dashed var(--green-mid); border-radius:14px;
+  padding:16px 18px; text-align:center; margin-bottom:18px;
+}
+.pay-box .amt{ font-family:var(--font-en); font-weight:800; font-size:24px; color:var(--green-deep); letter-spacing:1px; }
+.pay-box .lbl{ font-size:12.5px; color:var(--ink-soft); margin-bottom:4px; }
+.copy-btn{
+  border:none; background:var(--green-mid); color:#fff; border-radius:999px; padding:5px 12px;
+  font-size:12px; cursor:pointer; margin-left:8px; font-family:var(--font-en);
+}
+
+.method-row{ display:flex; gap:10px; margin-bottom:16px; }
+.method-pill{ flex:1; border:1.5px solid var(--border); border-radius:12px; padding:12px 8px; text-align:center; cursor:pointer; font-size:13.5px; font-weight:600; }
+.method-pill input{ display:none; }
+.method-pill.checked{ border-color:var(--green-mid); background:var(--green-soft); color:var(--green-deep); }
+
 /* ---------- tables (admin) ---------- */
 .table-wrap{ overflow:auto; border:1px solid var(--border); border-radius:14px; background:#fff; }
 table{ width:100%; border-collapse:collapse; font-size:14px; }
