@@ -1,7 +1,0 @@
-{
-  "name": "mahins-classroom-exam",
-  "private": true,
-  "version": "1.0.0",
-  "type": "module",
-  "description": "Exam | MAHIN'S CLASSROOM — static exam site with a single Vercel serverless function that hands out the Firebase web config from environment variables."
-}
