@@ -95,6 +95,16 @@
         <input type="number" id="exDuration" value="60" min="1" required>
       </div>
       <div class="field">
+        <label>প্রতি ভুল উত্তরে নেগেটিভ মার্ক (ঐচ্ছিক)</label>
+        <input type="number" id="exNegativeMark" value="0" min="0" step="0.01">
+        <p class="small-note" style="margin-top:6px;">যেমন 0.25 দিলে প্রতিটি ভুল উত্তরে 0.25 নম্বর কাটা যাবে। ০ রাখলে কোনো নেগেটিভ মার্কিং হবে না।</p>
+      </div>
+      <div class="field">
+        <label>২য় টাইমারদের জন্য অতিরিক্ত নেগেটিভ মার্ক (ঐচ্ছিক)</label>
+        <input type="number" id="exSecondTimerNegative" value="0" min="0" step="0.01">
+        <p class="small-note" style="margin-top:6px;">যাদের প্রোফাইলে "সেকেন্ড টাইমার: হ্যাঁ" সেট করা আছে, প্রতি ভুল উত্তরে উপরের নেগেটিভ মার্কের সাথে এই বাড়তি মার্কও কাটা যাবে।</p>
+      </div>
+      <div class="field">
         <label>প্রশ্নের ফাইল</label>
         <input type="file" id="exFile" accept="application/json" required>
         <p class="small-note" style="margin-top:6px;">
@@ -252,6 +262,48 @@
         <input type="number" id="cPrice" value="0" min="0" required>
       </div>
       <button type="submit" class="btn btn-primary btn-block" id="courseSaveBtn">সংরক্ষণ করো</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="examModalBackdrop">
+  <div class="nav-popup" style="max-width:480px;">
+    <div class="nav-popup-head">
+      <h3>পরীক্ষা সম্পাদনা</h3>
+      <button class="nav-popup-close" id="examModalClose"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="examModalBanner"></div>
+    <form id="examEditForm">
+      <div class="field">
+        <label>কোর্স</label>
+        <select id="eeCourse" required></select>
+      </div>
+      <div class="field">
+        <label>পরীক্ষার নাম</label>
+        <input type="text" id="eeTitle" required>
+      </div>
+      <div class="field">
+        <label>বিষয় (ঐচ্ছিক)</label>
+        <input type="text" id="eeSubject">
+      </div>
+      <div class="field">
+        <label>সময়সীমা (মিনিট)</label>
+        <input type="number" id="eeDuration" min="1" required>
+      </div>
+      <div class="field">
+        <label>প্রতি ভুল উত্তরে নেগেটিভ মার্ক</label>
+        <input type="number" id="eeNegativeMark" min="0" step="0.01">
+      </div>
+      <div class="field">
+        <label>২য় টাইমারদের জন্য অতিরিক্ত নেগেটিভ মার্ক</label>
+        <input type="number" id="eeSecondTimerNegative" min="0" step="0.01">
+      </div>
+      <div class="field">
+        <label>প্রশ্নের ফাইল প্রতিস্থাপন করো (ঐচ্ছিক)</label>
+        <input type="file" id="eeFile" accept="application/json">
+        <p class="small-note" style="margin-top:6px;">নতুন ফাইল না দিলে বর্তমান প্রশ্নগুলোই থাকবে — শুধু উপরের তথ্য হালনাগাদ হবে।</p>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" id="examEditSaveBtn">সংরক্ষণ করো</button>
     </form>
   </div>
 </div>
