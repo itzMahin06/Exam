@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<script>
+(function(){
+  try{
+    var pref = localStorage.getItem('mc_theme') || 'system';
+    var dark = pref === 'night' || (pref === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  }catch(e){}
+})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>কোর্সসমূহ | Exam - MAHIN'S CLASSROOM</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body>
+
+<header class="topnav">
+  <div class="topnav-inner">
+    <a href="index.html" class="brand">
+      <span class="brand-mark">MC</span>
+      <span class="brand-text"><b>MAHIN'S CLASSROOM</b><span>Exam</span></span>
+    </a>
+    <div class="theme-switch">
+      <button class="theme-btn" data-theme-btn aria-label="থিম পরিবর্তন করো"><i class="fa-solid fa-circle-half-stroke"></i></button>
+      <div class="theme-menu" data-theme-menu>
+        <button data-theme-choice="day"><i class="fa-solid fa-sun"></i> Day</button>
+        <button data-theme-choice="night"><i class="fa-solid fa-moon"></i> Night</button>
+        <button data-theme-choice="system"><i class="fa-solid fa-circle-half-stroke"></i> System</button>
+      </div>
+    </div>
+    <button class="nav-toggle" data-nav-toggle aria-label="মেনু"><i class="fa-solid fa-bars"></i></button>
+    <nav class="nav-links" data-nav-links>
+      <a href="index.html">হোম</a>
+      <a href="courses.html">কোর্সসমূহ</a>
+      <a href="leaderboard.html">লিডারবোর্ড</a>
+      <a href="dashboard.html">আমার ফলাফল</a>
+      <a href="profile.html">প্রোফাইল</a>
+      <a href="admin.html" data-nav-admin style="display:none">অ্যাডমিন</a>
+    </nav>
+    <div data-nav-guest><a href="login.html" class="nav-btn">লগইন</a></div>
+    <div data-nav-user class="nav-user" style="display:none">
+      <img data-nav-avatar alt="">
+      <button class="nav-btn" data-nav-logout>লগআউট</button>
+    </div>
+  </div>
+</header>
+
+<main class="shell" style="padding-bottom:70px;">
+  <div class="page-head flex-between">
+    <div>
+      <h1>কোর্সসমূহ</h1>
+      <p>তোমার লক্ষ্য অনুযায়ী কোর্স বেছে নাও এবং পরীক্ষা শুরু করো।</p>
+    </div>
+    <button class="btn btn-outline btn-sm" id="refreshBtn"><i class="fa-solid fa-rotate"></i> রিফ্রেশ</button>
+  </div>
+
+  <div class="tabs" id="catTabs">
+    <button class="tab-btn active" data-cat="all">সব</button>
+    <button class="tab-btn" data-cat="free">ফ্রি</button>
+    <button class="tab-btn" data-cat="engineering">ইঞ্জিনিয়ারিং</button>
+    <button class="tab-btn" data-cat="medical">মেডিকেল</button>
+    <button class="tab-btn" data-cat="varsity">ভার্সিটি</button>
+  </div>
+
+  <div id="courseGrid" class="course-grid"></div>
+</main>
+
+<footer class="site-footer"><p>©MAHIN'S CLASSROOM</p></footer>
+
+<script type="module">
+  import { getFirebase, doc, getDoc } from "./assets/js/firebase-init.js";
+  import { guardPage } from "./assets/js/auth.js";
+  import { Cache } from "./assets/js/cache.js";
+
+  const { user } = await guardPage({ needAuth: true, needProfile: true });
+  if (!user) throw new Error("redirecting");
+
+  const grid = document.getElementById("courseGrid");
+  const catLabels = { varsity: "ভার্সিটি", engineering: "ইঞ্জিনিয়ারিং", medical: "মেডিকেল", free: "ফ্রি" };
+  let allCourses = [];
+  let activeCat = "all";
+
+  async function loadCourses(force = false) {
+    let list = force ? null : Cache.get("coursesIndex");
+    if (!list) {
+      grid.innerHTML = `<div class="loader"><span class="spinner"></span> লোড হচ্ছে...</div>`;
+      const { db } = await getFirebase();
+      const snap = await getDoc(doc(db, "meta", "coursesIndex"));
+      list = snap.exists() ? (snap.data().courses || []) : [];
+      Cache.set("coursesIndex", list);
+    }
+    allCourses = list;
+    render();
+  }
+
+  function render() {
+    const list = activeCat === "all" ? allCourses : allCourses.filter(c => c.category === activeCat);
+    if (!list.length) {
+      grid.innerHTML = `<div class="empty-state"><div class="ico"><i class="fa-solid fa-inbox"></i></div><p>এই তালিকায় এখনো কোনো কোর্স নেই।</p></div>`;
+      return;
+    }
+    grid.innerHTML = list.map(c => `
+      <a class="course-card" href="course.html?id=${encodeURIComponent(c.id)}">
+        <div class="course-banner">
+          ${c.imageUrl ? `<img src="${escAttr(c.imageUrl)}" alt="${escAttr(c.name)}" loading="lazy">` : ""}
+          <span class="cat-badge ${c.category === "free" ? "free" : ""}">${catLabels[c.category] || c.category}</span>
+        </div>
+        <div class="course-card-body">
+          <h3>${escapeHtml(c.name)}</h3>
+          <p>${escapeHtml(c.description || "")}</p>
+          <div class="course-price-row">
+            <span class="price-tag ${c.category === "free" || !c.price ? "free" : ""}">${c.category === "free" || !c.price ? "ফ্রি" : "৳ " + c.price}</span>
+            <span class="small-note">${c.examCount || 0} টি পরীক্ষা</span>
+          </div>
+        </div>
+      </a>
+    `).join("");
+  }
+
+  document.getElementById("catTabs").addEventListener("click", (e) => {
+    const btn = e.target.closest(".tab-btn");
+    if (!btn) return;
+    document.querySelectorAll("#catTabs .tab-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    activeCat = btn.dataset.cat;
+    render();
+  });
+
+  document.getElementById("refreshBtn").addEventListener("click", () => {
+    Cache.remove("coursesIndex");
+    loadCourses(true);
+  });
+
+  function escapeHtml(s){ const d=document.createElement("div"); d.textContent = s||""; return d.innerHTML; }
+  function escAttr(s){ return escapeHtml(s).replace(/"/g,"&quot;"); }
+
+  loadCourses();
+</script>
+</body>
+</html>
