@@ -1,6 +1,6 @@
 import {
   getFirebase, doc, getDoc, setDoc, updateDoc, deleteDoc,
-  collection, getDocs, addDoc, query, where, serverTimestamp, arrayUnion
+  collection, getDocs, addDoc, query, where, serverTimestamp, arrayUnion, increment
 } from "./firebase-init.js";
 import { guardPage } from "./auth.js";
 import { Cache } from "./cache.js";
@@ -148,7 +148,7 @@ courseForm.addEventListener("submit", async (e) => {
       });
       const metaSnap = await getDoc(metaRef);
       const courses = metaSnap.exists() ? (metaSnap.data().courses || []) : [];
-      courses.push({ id: ref.id, name, description, imageUrl, category, price, examCount: 0 });
+      courses.push({ id: ref.id, name, description, imageUrl, category, price, examCount: 0, enrolledCount: 0 });
       await setDoc(metaRef, { courses });
     }
 
@@ -191,6 +191,8 @@ uploadForm.addEventListener("submit", async (e) => {
   const title = document.getElementById("exTitle").value.trim();
   const subject = document.getElementById("exSubject").value.trim();
   const duration = Number(document.getElementById("exDuration").value) || 60;
+  const negativeMark = Number(document.getElementById("exNegativeMark").value) || 0;
+  const secondTimerNegative = Number(document.getElementById("exSecondTimerNegative").value) || 0;
   const file = document.getElementById("exFile").files[0];
 
   if (!courseId) {
@@ -225,7 +227,7 @@ uploadForm.addEventListener("submit", async (e) => {
     }
 
     const examData = {
-      title, subject, duration,
+      title, subject, duration, negativeMark, secondTimerNegative,
       courseId, courseName: course ? course.name : "", isFree,
       totalQuestions: questions.length,
       questions,
@@ -239,7 +241,10 @@ uploadForm.addEventListener("submit", async (e) => {
     const metaRef = doc(db, "meta", "examsIndex");
     const metaSnap = await getDoc(metaRef);
     const exams = metaSnap.exists() ? (metaSnap.data().exams || []) : [];
-    exams.push({ id: ref.id, title, subject, duration, totalQuestions: questions.length, courseId, courseName: course ? course.name : "", isFree });
+    exams.push({
+      id: ref.id, title, subject, duration, negativeMark, secondTimerNegative,
+      totalQuestions: questions.length, courseId, courseName: course ? course.name : "", isFree
+    });
     await setDoc(metaRef, { exams });
 
     // bump the course's exam count in meta/coursesIndex
@@ -270,6 +275,7 @@ uploadForm.addEventListener("submit", async (e) => {
 // MANAGE EXAMS
 // =================================================================
 const examsAdminList = document.getElementById("examsAdminList");
+let examsCache = [];
 
 async function loadExamsAdmin(force = false) {
   let list = force ? null : Cache.get("examsIndex");
@@ -279,6 +285,7 @@ async function loadExamsAdmin(force = false) {
     list = snap.exists() ? (snap.data().exams || []) : [];
     Cache.set("examsIndex", list);
   }
+  examsCache = list;
   if (!list.length) {
     examsAdminList.innerHTML = `<div class="empty-state"><div class="ico"><i class="fa-solid fa-inbox"></i></div><p>এখনো কোনো পরীক্ষা যোগ করা হয়নি।</p></div>`;
     return;
@@ -292,14 +299,22 @@ async function loadExamsAdmin(force = false) {
           <span><i class="fa-solid fa-clock"></i> ${ex.duration || 0} মিনিট</span>
           ${ex.courseName ? `<span class="chip">${escapeHtml(ex.courseName)}</span>` : `<span class="small-note">কোনো কোর্স নেই</span>`}
           ${ex.isFree ? `<span class="chip" style="background:var(--amber-soft); color:#8A5D0F;">ফ্রি</span>` : ""}
+          ${ex.negativeMark ? `<span class="chip" style="background:var(--wrong-soft); color:var(--wrong);">-${ex.negativeMark} নেগেটিভ</span>` : ""}
+          ${ex.secondTimerNegative ? `<span class="chip" style="background:var(--wrong-soft); color:var(--wrong);">২য় টাইমার -${ex.secondTimerNegative}</span>` : ""}
         </div>
       </div>
-      <button class="btn btn-danger btn-sm" data-del="${ex.id}">ডিলিট করো</button>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-outline btn-sm" data-edit-exam="${ex.id}">সম্পাদনা</button>
+        <button class="btn btn-danger btn-sm" data-del="${ex.id}">ডিলিট করো</button>
+      </div>
     </div>
   `).join("");
 
   examsAdminList.querySelectorAll("[data-del]").forEach(btn => {
     btn.addEventListener("click", () => deleteExam(btn.dataset.del));
+  });
+  examsAdminList.querySelectorAll("[data-edit-exam]").forEach(btn => {
+    btn.addEventListener("click", () => openExamEditModal(btn.dataset.editExam));
   });
 }
 
@@ -332,6 +347,124 @@ async function deleteExam(examId) {
 document.getElementById("examsRefreshBtn").addEventListener("click", () => {
   Cache.remove("examsIndex");
   loadExamsAdmin(true);
+});
+
+// exam edit modal
+const examModalBackdrop = document.getElementById("examModalBackdrop");
+const examEditForm = document.getElementById("examEditForm");
+const examModalBanner = document.getElementById("examModalBanner");
+const eeCourseSelect = document.getElementById("eeCourse");
+let editingExamId = null;
+
+function openExamEditModal(examId) {
+  const ex = examsCache.find(x => x.id === examId);
+  if (!ex) return;
+  editingExamId = examId;
+  examModalBanner.innerHTML = "";
+  examEditForm.reset();
+
+  eeCourseSelect.innerHTML = `<option value="">নির্বাচন করো</option>` +
+    coursesCache.map(c => `<option value="${c.id}">${escapeHtml(c.name)} (${catLabels[c.category] || c.category})</option>`).join("");
+  eeCourseSelect.value = ex.courseId || "";
+
+  document.getElementById("eeTitle").value = ex.title || "";
+  document.getElementById("eeSubject").value = ex.subject || "";
+  document.getElementById("eeDuration").value = ex.duration || 60;
+  document.getElementById("eeNegativeMark").value = ex.negativeMark || 0;
+  document.getElementById("eeSecondTimerNegative").value = ex.secondTimerNegative || 0;
+
+  examModalBackdrop.classList.add("open");
+}
+document.getElementById("examModalClose").addEventListener("click", () => examModalBackdrop.classList.remove("open"));
+examModalBackdrop.addEventListener("click", (e) => { if (e.target === examModalBackdrop) examModalBackdrop.classList.remove("open"); });
+
+examEditForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!editingExamId) return;
+
+  const oldExam = examsCache.find(x => x.id === editingExamId);
+  const courseId = eeCourseSelect.value;
+  const title = document.getElementById("eeTitle").value.trim();
+  const subject = document.getElementById("eeSubject").value.trim();
+  const duration = Number(document.getElementById("eeDuration").value) || 60;
+  const negativeMark = Number(document.getElementById("eeNegativeMark").value) || 0;
+  const secondTimerNegative = Number(document.getElementById("eeSecondTimerNegative").value) || 0;
+  const file = document.getElementById("eeFile").files[0];
+
+  if (!courseId || !title) {
+    examModalBanner.innerHTML = `<div class="banner error">কোর্স ও পরীক্ষার নাম আবশ্যক।</div>`;
+    return;
+  }
+
+  const course = coursesCache.find(c => c.id === courseId);
+  const isFree = course ? (course.category === "free" || !course.price) : false;
+
+  const btn = document.getElementById("examEditSaveBtn");
+  btn.disabled = true;
+  btn.textContent = "সংরক্ষণ হচ্ছে...";
+
+  try {
+    const patch = {
+      title, subject, duration, negativeMark, secondTimerNegative,
+      courseId, courseName: course ? course.name : "", isFree,
+      updatedAt: serverTimestamp()
+    };
+
+    if (file) {
+      const text = await file.text();
+      let questions;
+      try {
+        questions = JSON.parse(text);
+      } catch (err) {
+        throw new Error("ফাইলটি সঠিক ফরম্যাটে নেই।");
+      }
+      if (!Array.isArray(questions) || !questions.length) {
+        throw new Error("ফাইলে কোনো প্রশ্ন পাওয়া যায়নি।");
+      }
+      for (const q of questions) {
+        if (!q.question || !q.options || !q.correct_answer) {
+          throw new Error("কিছু প্রশ্নে প্রয়োজনীয় তথ্য নেই (question / options / correct_answer)।");
+        }
+      }
+      patch.questions = questions;
+      patch.totalQuestions = questions.length;
+    }
+
+    await updateDoc(doc(db, "exams", editingExamId), patch);
+
+    const metaRef = doc(db, "meta", "examsIndex");
+    const metaSnap = await getDoc(metaRef);
+    const exams = (metaSnap.data()?.exams || []).map(ex =>
+      ex.id === editingExamId
+        ? { ...ex, title, subject, duration, negativeMark, secondTimerNegative, courseId, courseName: course ? course.name : "", isFree, totalQuestions: patch.totalQuestions ?? ex.totalQuestions }
+        : ex
+    );
+    await setDoc(metaRef, { exams });
+
+    // If the course changed, move the exam count between old and new course.
+    if (oldExam && oldExam.courseId !== courseId) {
+      const coursesMetaRef = doc(db, "meta", "coursesIndex");
+      const coursesMetaSnap = await getDoc(coursesMetaRef);
+      const courses = (coursesMetaSnap.data()?.courses || []).map(c => {
+        if (c.id === oldExam.courseId) return { ...c, examCount: Math.max(0, (c.examCount || 0) - 1) };
+        if (c.id === courseId) return { ...c, examCount: (c.examCount || 0) + 1 };
+        return c;
+      });
+      await setDoc(coursesMetaRef, { courses });
+      Cache.remove("coursesIndex");
+    }
+
+    Cache.remove("examsIndex");
+    Cache.remove("exam_" + editingExamId);
+    examModalBackdrop.classList.remove("open");
+    loadExamsAdmin(true);
+    loadCoursesAdmin(true);
+  } catch (err) {
+    examModalBanner.innerHTML = `<div class="banner error">${escapeHtml(err.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "সংরক্ষণ করো";
+  }
 });
 
 // =================================================================
@@ -421,6 +554,18 @@ async function reviewEnrollment(enrollId, decision) {
   const userPatch = { [`enrollmentStatus.${en.courseId}`]: decision };
   if (decision === "approved") userPatch.enrolledCourses = arrayUnion(en.courseId);
   await updateDoc(doc(db, "users", en.uid), userPatch);
+
+  if (decision === "approved" && en.courseId) {
+    await updateDoc(doc(db, "courses", en.courseId), { enrolledCount: increment(1) });
+    const coursesMetaRef = doc(db, "meta", "coursesIndex");
+    const coursesMetaSnap = await getDoc(coursesMetaRef);
+    const courses = (coursesMetaSnap.data()?.courses || []).map(c =>
+      c.id === en.courseId ? { ...c, enrolledCount: (c.enrolledCount || 0) + 1 } : c
+    );
+    await setDoc(coursesMetaRef, { courses });
+    Cache.remove("coursesIndex");
+    Cache.remove("course_" + en.courseId);
+  }
 
   Cache.remove("adminEnrollments");
   Cache.remove("adminUsers");
