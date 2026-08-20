@@ -6,7 +6,7 @@ import {
 import {
   getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc,
   collection, getDocs, addDoc, query, where, orderBy, limit,
-  serverTimestamp, arrayUnion
+  serverTimestamp, arrayUnion, increment
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 let _ready = null; // memoised promise so /api/config + initializeApp only ever run once
@@ -39,5 +39,5 @@ export {
   signInWithPopup, signOut, onAuthStateChanged,
   doc, getDoc, setDoc, updateDoc, deleteDoc,
   collection, getDocs, addDoc, query, where, orderBy, limit,
-  serverTimestamp, arrayUnion
+  serverTimestamp, arrayUnion, increment
 };
