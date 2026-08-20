@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<script>
+(function(){
+  try{
+    var pref = localStorage.getItem('mc_theme') || 'system';
+    var dark = pref === 'night' || (pref === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  }catch(e){}
+})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>কোর্স | Exam - MAHIN'S CLASSROOM</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body>
+
+<header class="topnav">
+  <div class="topnav-inner">
+    <a href="index.html" class="brand">
+      <span class="brand-mark">MC</span>
+      <span class="brand-text"><b>MAHIN'S CLASSROOM</b><span>Exam</span></span>
+    </a>
+    <div class="theme-switch">
+      <button class="theme-btn" data-theme-btn aria-label="থিম পরিবর্তন করো"><i class="fa-solid fa-circle-half-stroke"></i></button>
+      <div class="theme-menu" data-theme-menu>
+        <button data-theme-choice="day"><i class="fa-solid fa-sun"></i> Day</button>
+        <button data-theme-choice="night"><i class="fa-solid fa-moon"></i> Night</button>
+        <button data-theme-choice="system"><i class="fa-solid fa-circle-half-stroke"></i> System</button>
+      </div>
+    </div>
+    <button class="nav-toggle" data-nav-toggle aria-label="মেনু"><i class="fa-solid fa-bars"></i></button>
+    <nav class="nav-links" data-nav-links>
+      <a href="index.html">হোম</a>
+      <a href="courses.html">কোর্সসমূহ</a>
+      <a href="leaderboard.html">লিডারবোর্ড</a>
+      <a href="dashboard.html">আমার ফলাফল</a>
+      <a href="profile.html">প্রোফাইল</a>
+      <a href="admin.html" data-nav-admin style="display:none">অ্যাডমিন</a>
+    </nav>
+    <div class="account-switch">
+      <button class="account-btn" data-account-btn aria-label="অ্যাকাউন্ট">
+        <img data-nav-avatar alt="" style="display:none">
+        <i class="fa-solid fa-circle-user" data-nav-guest-icon></i>
+      </button>
+      <div class="account-menu" data-account-menu>
+        <div class="account-menu-name" data-nav-name style="display:none"></div>
+        <a href="profile.html" data-account-profile-link style="display:none"><i class="fa-solid fa-user"></i> প্রোফাইল</a>
+        <a href="login.html" data-account-login-link><i class="fa-solid fa-right-to-bracket"></i> লগইন করো</a>
+        <button data-nav-logout style="display:none"><i class="fa-solid fa-right-from-bracket"></i> লগআউট</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="shell-narrow" style="padding:30px 20px 70px;" id="courseBody">
+  <div class="loader"><span class="spinner"></span> লোড হচ্ছে...</div>
+</main>
+
+<footer class="site-footer"><p>©MAHIN'S CLASSROOM</p></footer>
+
+<!-- purchase / enroll modal -->
+<div class="modal-backdrop" id="enrollBackdrop">
+  <div class="nav-popup" style="max-width:440px;">
+    <div class="nav-popup-head">
+      <h3>কোর্সে ভর্তি হও</h3>
+      <button class="nav-popup-close" id="enrollClose"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <div class="pay-box">
+      <div class="lbl">এই নম্বরে টাকা পাঠাও (Send Money)</div>
+      <div class="amt" id="payNumberDisplay">01931923910</div>
+      <button type="button" class="copy-btn" id="copyNumBtn">কপি করো</button>
+      <div class="small-note" style="margin-top:8px;" id="enrollPriceNote"></div>
+    </div>
+
+    <form id="enrollForm">
+      <div class="field">
+        <label>পেমেন্ট মেথড</label>
+        <div class="method-row">
+          <label class="method-pill"><input type="radio" name="method" value="bkash">bKash</label>
+          <label class="method-pill"><input type="radio" name="method" value="nagad">Nagad</label>
+          <label class="method-pill"><input type="radio" name="method" value="rocket">Rocket</label>
+        </div>
+      </div>
+      <div class="field">
+        <label>যে নম্বর থেকে টাকা পাঠিয়েছো</label>
+        <input type="text" id="senderNumber" placeholder="01XXXXXXXXX" required>
+      </div>
+      <div class="field">
+        <label>ট্রানজেকশন আইডি</label>
+        <input type="text" id="txnId" placeholder="যেমন: 8N7A2K9XYZ" required>
+      </div>
+      <div id="enrollBanner"></div>
+      <button type="submit" class="btn btn-primary btn-block" id="enrollSubmitBtn">অনুরোধ পাঠাও</button>
+      <p class="small-note center" style="margin-top:10px;">অ্যাডমিন যাচাই করার পর কোর্সটি আনলক হয়ে যাবে।</p>
+    </form>
+  </div>
+</div>
+
+<script type="module">
+  import { getFirebase, doc, getDoc, collection, addDoc, serverTimestamp } from "./assets/js/firebase-init.js";
+  import { guardPage, getProfile, courseIsFree } from "./assets/js/auth.js";
+  import { getMyResults } from "./assets/js/results.js";
+  import { Cache } from "./assets/js/cache.js";
+
+  const { user, profile: initialProfile } = await guardPage({ needAuth: true, needProfile: true });
+  if (!user) throw new Error("redirecting");
+  let profile = initialProfile;
+
+  const params = new URLSearchParams(location.search);
+  const courseId = params.get("id");
+  const body = document.getElementById("courseBody");
+
+  function escapeHtml(s){ const d=document.createElement("div"); d.textContent = s||""; return d.innerHTML; }
+  function escAttr(s){ return escapeHtml(s).replace(/"/g,"&quot;"); }
+
+  if (!courseId) {
+    body.innerHTML = `<div class="empty-state"><div class="ico"><i class="fa-solid fa-triangle-exclamation"></i></div><p>কোনো কোর্স নির্বাচন করা হয়নি।</p><a class="btn btn-primary" href="courses.html">কোর্সসমূহ দেখো</a></div>`;
+    throw new Error("missing course id");
+  }
+
+  const catLabels = { varsity: "ভার্সিটি", engineering: "ইঞ্জিনিয়ারিং", medical: "মেডিকেল", free: "ফ্রি" };
+
+  async function loadCourse() {
+    const key = "course_" + courseId;
+    let course = Cache.get(key);
+    if (!course) {
+      const { db } = await getFirebase();
+      const snap = await getDoc(doc(db, "courses", courseId));
+      if (!snap.exists()) return null;
+      course = { id: courseId, ...snap.data() };
+      Cache.set(key, course);
+    }
+    return course;
+  }
+
+  async function loadExamsForCourse() {
+    let list = Cache.get("examsIndex");
+    if (!list) {
+      const { db } = await getFirebase();
+      const snap = await getDoc(doc(db, "meta", "examsIndex"));
+      list = snap.exists() ? (snap.data().exams || []) : [];
+      Cache.set("examsIndex", list);
+    }
+    return list.filter(e => e.courseId === courseId);
+  }
+
+  const course = await loadCourse();
+  if (!course) {
+    body.innerHTML = `<div class="empty-state"><div class="ico"><i class="fa-solid fa-triangle-exclamation"></i></div><p>এই কোর্সটি খুঁজে পাওয়া যায়নি।</p><a class="btn btn-primary" href="courses.html">কোর্সসমূহ দেখো</a></div>`;
+    throw new Error("course not found");
+  }
+  const exams = await loadExamsForCourse();
+
+  // Which of these exams has the student already attempted at least once?
+  // (that's what unlocks the solve-sheet / "retake" button per exam)
+  let attemptedExamIds = new Set();
+  try {
+    const myResults = await getMyResults(user.uid);
+    attemptedExamIds = new Set(myResults.map(r => r.examId));
+  } catch (err) {
+    console.error("Could not load attempt history:", err);
+  }
+
+  function accessState() {
+    if (profile.role === "admin") return "approved";
+    if (courseIsFree(course)) return "approved";
+    if (Array.isArray(profile.enrolledCourses) && profile.enrolledCourses.includes(courseId)) return "approved";
+    const st = profile.enrollmentStatus && profile.enrollmentStatus[courseId];
+    if (st === "pending") return "pending";
+    if (st === "declined") return "declined";
+    return "none";
+  }
+
+  function render() {
+    const state = accessState();
+    const badgeMap = {
+      approved: `<span class="access-badge approved"><i class="fa-solid fa-circle-check"></i> ভর্তি হয়ে গেছে</span>`,
+      pending: `<span class="access-badge pending"><i class="fa-solid fa-hourglass-half"></i> অনুরোধ পর্যালোচনাধীন</span>`,
+      declined: `<span class="access-badge declined"><i class="fa-solid fa-circle-xmark"></i> অনুরোধ প্রত্যাখ্যাত — আবার চেষ্টা করো</span>`,
+      none: `<span class="access-badge locked"><i class="fa-solid fa-lock"></i> এখনো ভর্তি হওনি</span>`
+    };
+
+    body.innerHTML = `
+      ${course.imageUrl ? `<div class="course-hero-banner"><img src="${escAttr(course.imageUrl)}" alt="${escAttr(course.name)}"></div>` : ""}
+      <div class="flex-between" style="margin-bottom:8px;">
+        <span class="chip">${catLabels[course.category] || course.category}</span>
+        <span class="price-tag ${courseIsFree(course) ? "free" : ""}">${courseIsFree(course) ? "ফ্রি" : "৳ " + course.price}</span>
+      </div>
+      <h1 style="font-size:24px;">${escapeHtml(course.name)}</h1>
+      <p>${escapeHtml(course.description || "")}</p>
+
+      <div class="flex-between" style="margin:14px 0 22px;">
+        ${badgeMap[state]}
+        ${state === "none" || state === "declined"
+          ? `<button class="btn btn-amber btn-sm" id="enrollBtn">এখনই এনরোল করো</button>`
+          : state === "pending"
+          ? `<button class="btn btn-outline btn-sm" id="refreshStatusBtn"><i class="fa-solid fa-rotate"></i> স্ট্যাটাস যাচাই করো</button>`
+          : ""
+        }
+      </div>
+
+      <h2 style="font-size:18px; margin-bottom:12px;">এই কোর্সের পরীক্ষাসমূহ</h2>
+      <div id="courseExamList"></div>
+    `;
+
+    const examListEl = document.getElementById("courseExamList");
+    if (!exams.length) {
+      examListEl.innerHTML = `<div class="empty-state"><div class="ico"><i class="fa-solid fa-folder-open"></i></div><p>এই কোর্সে এখনো কোনো পরীক্ষা যোগ করা হয়নি।</p></div>`;
+    } else if (state === "approved") {
+      examListEl.innerHTML = `<div class="exam-list">` + exams.map(ex => {
+        const attempted = attemptedExamIds.has(ex.id);
+        return `
+        <div class="exam-item">
+          <div>
+            <h3>${escapeHtml(ex.title)}</h3>
+            <div class="exam-meta">
+              <span><i class="fa-solid fa-circle-question"></i> ${ex.totalQuestions || 0} টি প্রশ্ন</span>
+              <span><i class="fa-solid fa-clock"></i> ${ex.duration || 0} মিনিট</span>
+              ${attempted ? `<span class="chip"><i class="fa-solid fa-circle-check"></i> অংশ নেওয়া হয়েছে</span>` : ""}
+            </div>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            ${attempted
+              ? `<a class="btn btn-outline btn-sm" href="exam.html?id=${encodeURIComponent(ex.id)}"><i class="fa-solid fa-rotate-right"></i> আবার পরীক্ষা দাও</a>
+                 <a class="btn btn-primary btn-sm" href="solve-sheet.html?id=${encodeURIComponent(ex.id)}" target="_blank"><i class="fa-solid fa-file-arrow-down"></i> সমাধান শীট</a>`
+              : `<a class="btn btn-primary btn-sm" href="exam.html?id=${encodeURIComponent(ex.id)}">পরীক্ষা শুরু করো</a>`
+            }
+          </div>
+        </div>
+      `;
+      }).join("") + `</div>`;
+    } else {
+      examListEl.innerHTML = exams.map(ex => `
+        <div class="lock-row">
+          <div>
+            <h3 style="margin:0 0 4px; font-size:15.5px;">${escapeHtml(ex.title)}</h3>
+            <div class="exam-meta"><span><i class="fa-solid fa-circle-question"></i> ${ex.totalQuestions || 0} টি প্রশ্ন</span><span><i class="fa-solid fa-clock"></i> ${ex.duration || 0} মিনিট</span></div>
+          </div>
+          <span class="small-note"><i class="fa-solid fa-lock"></i> লক করা</span>
+        </div>
+      `).join("");
+    }
+
+    const enrollBtn = document.getElementById("enrollBtn");
+    if (enrollBtn) enrollBtn.addEventListener("click", openEnrollModal);
+    const refreshStatusBtn = document.getElementById("refreshStatusBtn");
+    if (refreshStatusBtn) refreshStatusBtn.addEventListener("click", async () => {
+      refreshStatusBtn.textContent = "যাচাই করা হচ্ছে...";
+      profile = await getProfile(user.uid, true);
+      render();
+    });
+  }
+
+  render();
+
+  // ---------------- enroll modal ----------------
+  const enrollBackdrop = document.getElementById("enrollBackdrop");
+  const enrollForm = document.getElementById("enrollForm");
+  const enrollBanner = document.getElementById("enrollBanner");
+
+  async function openEnrollModal() {
+    const { paymentNumber } = await getFirebase();
+    document.getElementById("payNumberDisplay").textContent = paymentNumber || "01931923910";
+    document.getElementById("enrollPriceNote").textContent = `কোর্স মূল্য: ৳ ${course.price || 0}`;
+    enrollForm.reset();
+    document.querySelectorAll(".method-pill").forEach(p => p.classList.remove("checked"));
+    enrollBanner.innerHTML = "";
+    enrollBackdrop.classList.add("open");
+  }
+  document.getElementById("enrollClose").addEventListener("click", () => enrollBackdrop.classList.remove("open"));
+  enrollBackdrop.addEventListener("click", (e) => { if (e.target === enrollBackdrop) enrollBackdrop.classList.remove("open"); });
+
+  document.getElementById("copyNumBtn").addEventListener("click", async () => {
+    const numText = document.getElementById("payNumberDisplay").textContent;
+    try { await navigator.clipboard.writeText(numText); } catch (e) {}
+    const btn = document.getElementById("copyNumBtn");
+    const old = btn.innerHTML;
+    btn.innerHTML = 'কপি হয়েছে <i class="fa-solid fa-check"></i>';
+    setTimeout(() => btn.innerHTML = old, 1500);
+  });
+
+  document.querySelectorAll(".method-pill").forEach(pill => {
+    pill.addEventListener("click", () => {
+      document.querySelectorAll(".method-pill").forEach(p => p.classList.remove("checked"));
+      pill.classList.add("checked");
+    });
+  });
+
+  enrollForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const method = enrollForm.querySelector('input[name=method]:checked')?.value;
+    const senderNumber = document.getElementById("senderNumber").value.trim();
+    const txnId = document.getElementById("txnId").value.trim();
+
+    if (!method) {
+      enrollBanner.innerHTML = `<div class="banner error">পেমেন্ট মেথড নির্বাচন করো।</div>`;
+      return;
+    }
+
+    const btn = document.getElementById("enrollSubmitBtn");
+    btn.disabled = true;
+    btn.textContent = "পাঠানো হচ্ছে...";
+
+    try {
+      const { db } = await getFirebase();
+      await addDoc(collection(db, "enrollments"), {
+        uid: user.uid,
+        userName: profile.name || user.displayName || "শিক্ষার্থী",
+        userEmail: profile.email || user.email || "",
+        courseId,
+        courseName: course.name,
+        coursePrice: course.price || 0,
+        paymentMethod: method,
+        senderNumber,
+        transactionId: txnId,
+        status: "pending",
+        createdAt: serverTimestamp()
+      });
+
+      // optimistic local update so the page reflects "pending" instantly
+      profile = {
+        ...profile,
+        enrollmentStatus: { ...(profile.enrollmentStatus || {}), [courseId]: "pending" }
+      };
+      Cache.set("profile_" + user.uid, profile);
+
+      enrollBackdrop.classList.remove("open");
+      render();
+    } catch (err) {
+      enrollBanner.innerHTML = `<div class="banner error">অনুরোধ পাঠাতে ব্যর্থ হয়েছে: ${escapeHtml(err.message)}</div>`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "অনুরোধ পাঠাও";
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<script>
+(function(){
+  try{
+    var pref = localStorage.getItem('mc_theme') || 'system';
+    var dark = pref === 'night' || (pref === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  }catch(e){}
+})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>লিডারবোর্ড | Exam - MAHIN'S CLASSROOM</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body>
+
+<header class="topnav">
+  <div class="topnav-inner">
+    <a href="index.html" class="brand">
+      <span class="brand-mark">MC</span>
+      <span class="brand-text"><b>MAHIN'S CLASSROOM</b><span>Exam</span></span>
+    </a>
+    <div class="theme-switch">
+      <button class="theme-btn" data-theme-btn aria-label="থিম পরিবর্তন করো"><i class="fa-solid fa-circle-half-stroke"></i></button>
+      <div class="theme-menu" data-theme-menu>
+        <button data-theme-choice="day"><i class="fa-solid fa-sun"></i> Day</button>
+        <button data-theme-choice="night"><i class="fa-solid fa-moon"></i> Night</button>
+        <button data-theme-choice="system"><i class="fa-solid fa-circle-half-stroke"></i> System</button>
+      </div>
+    </div>
+    <button class="nav-toggle" data-nav-toggle aria-label="মেনু"><i class="fa-solid fa-bars"></i></button>
+    <nav class="nav-links" data-nav-links>
+      <a href="index.html">হোম</a>
+      <a href="courses.html">কোর্সসমূহ</a>
+      <a href="leaderboard.html">লিডারবোর্ড</a>
+      <a href="dashboard.html">আমার ফলাফল</a>
+      <a href="profile.html">প্রোফাইল</a>
+      <a href="admin.html" data-nav-admin style="display:none">অ্যাডমিন</a>
+    </nav>
+    <div class="account-switch">
+      <button class="account-btn" data-account-btn aria-label="অ্যাকাউন্ট">
+        <img data-nav-avatar alt="" style="display:none">
+        <i class="fa-solid fa-circle-user" data-nav-guest-icon></i>
+      </button>
+      <div class="account-menu" data-account-menu>
+        <div class="account-menu-name" data-nav-name style="display:none"></div>
+        <a href="profile.html" data-account-profile-link style="display:none"><i class="fa-solid fa-user"></i> প্রোফাইল</a>
+        <a href="login.html" data-account-login-link><i class="fa-solid fa-right-to-bracket"></i> লগইন করো</a>
+        <button data-nav-logout style="display:none"><i class="fa-solid fa-right-from-bracket"></i> লগআউট</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="shell-narrow" style="padding:30px 20px 70px;">
+  <div class="page-head">
+    <h1>লিডারবোর্ড</h1>
+    <p>একটি পরীক্ষা বেছে নিয়ে সেরা স্কোরারদের দেখো।</p>
+  </div>
+
+  <div class="field">
+    <select id="examSelect"></select>
+  </div>
+
+  <div class="flex-between" style="margin-bottom:10px;">
+    <span class="small-note" id="participantCount">লোড হচ্ছে...</span>
+    <button class="btn btn-outline btn-sm" id="refreshBtn"><i class="fa-solid fa-rotate"></i> রিফ্রেশ</button>
+  </div>
+
+  <div id="lbList"></div>
+</main>
+
+<footer class="site-footer"><p>©MAHIN'S CLASSROOM</p></footer>
+
+<script type="module">
+  import { getFirebase, doc, getDoc, collection, getDocs, query, where, orderBy, limit } from "./assets/js/firebase-init.js";
+  import { guardPage } from "./assets/js/auth.js";
+  import { Cache } from "./assets/js/cache.js";
+
+  const { user } = await guardPage({ needAuth: true, needProfile: true });
+  if (!user) throw new Error("redirecting");
+
+  const select = document.getElementById("examSelect");
+  const lbList = document.getElementById("lbList");
+  const params = new URLSearchParams(location.search);
+  const preselect = params.get("examId");
+
+  async function loadExamOptions() {
+    try {
+      let list = Cache.get("examsIndex");
+      if (!list) {
+        const { db } = await getFirebase();
+        const snap = await getDoc(doc(db, "meta", "examsIndex"));
+        list = snap.exists() ? (snap.data().exams || []) : [];
+        Cache.set("examsIndex", list);
+      }
+      if (!list.length) {
+        select.innerHTML = `<option value="">কোনো পরীক্ষা নেই</option>`;
+        lbList.innerHTML = `<div class="empty-state"><div class="ico"><i class="fa-solid fa-inbox"></i></div><p>এখনো কোনো পরীক্ষা নেই।</p></div>`;
+        return;
+      }
+      select.innerHTML = list.map(ex => `<option value="${ex.id}">${escapeHtml(ex.title)}</option>`).join("");
+      if (preselect && list.some(e => e.id === preselect)) select.value = preselect;
+      loadLeaderboard(select.value);
+    } catch (err) {
+      console.error("Failed to load exam list:", err);
+      lbList.innerHTML = `<div class="banner error">পরীক্ষার তালিকা লোড করা যায়নি: ${escapeHtml(err.message)}</div>`;
+    }
+  }
+
+  async function loadLeaderboard(examId, force = false) {
+    if (!examId) return;
+    const key = "leaderboard_" + examId;
+    let rows = force ? null : Cache.get(key);
+    if (!rows) {
+      lbList.innerHTML = `<div class="loader"><span class="spinner"></span> লোড হচ্ছে...</div>`;
+      try {
+        const { db } = await getFirebase();
+        // Equality-only filter — no composite index required. Sorted client-side.
+        // limit(2000) is a generous safety cap, not a "top N" cutoff — every
+        // participant who attempted this exam is shown.
+        const q = query(collection(db, "results"), where("examId", "==", examId), limit(2000));
+        const snap = await getDocs(q);
+        rows = snap.docs.map(d => d.data());
+        rows.sort((a, b) => (b.score || 0) - (a.score || 0));
+        Cache.set(key, rows);
+      } catch (err) {
+        console.error("Failed to load leaderboard:", err);
+        lbList.innerHTML = `<div class="banner error">লিডারবোর্ড লোড করা যায়নি: ${escapeHtml(err.message)}</div>`;
+        return;
+      }
+    }
+    renderRows(rows);
+  }
+
+  function renderRows(rows) {
+    document.getElementById("participantCount").textContent = `মোট ${rows.length} জন অংশ নিয়েছে`;
+    if (!rows.length) {
+      lbList.innerHTML = `<div class="empty-state"><div class="ico"><i class="fa-solid fa-trophy"></i></div><p>এখনো কেউ এই পরীক্ষাটি দেয়নি।</p></div>`;
+      return;
+    }
+    lbList.innerHTML = rows.map((r, i) => `
+      <div class="lb-row ${i === 0 ? "top1" : i === 1 ? "top2" : i === 2 ? "top3" : ""}">
+        <div class="lb-rank">${i + 1}</div>
+        <div class="lb-name">${escapeHtml(r.userName || "শিক্ষার্থী")}</div>
+        <div class="lb-score">${r.score}/${r.total}</div>
+      </div>
+    `).join("");
+  }
+
+  select.addEventListener("change", () => loadLeaderboard(select.value));
+  document.getElementById("refreshBtn").addEventListener("click", () => {
+    if (select.value) { Cache.remove("leaderboard_" + select.value); loadLeaderboard(select.value, true); }
+  });
+
+  function escapeHtml(s){ const d=document.createElement("div"); d.textContent = s||""; return d.innerHTML; }
+
+  loadExamOptions();
+</script>
+</body>
+</html>
