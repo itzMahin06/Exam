@@ -127,14 +127,32 @@ img{ max-width:100%; display:block; }
 .nav-links a:hover{ background:rgba(255,255,255,.1); color:#fff; }
 .nav-links a.active{ background:var(--amber); color:var(--green-deep); font-weight:600; }
 
-.nav-user{ display:flex; align-items:center; gap:8px; }
-.nav-user img{ width:32px; height:32px; border-radius:50%; border:2px solid var(--amber); }
-.nav-btn{
-  border:1px solid rgba(255,255,255,.3); background:transparent; color:#fff;
-  padding:7px 14px; border-radius:999px; cursor:pointer; font-size:13.5px;
-}
-.nav-btn:hover{ background:rgba(255,255,255,.12); }
 .nav-toggle{ display:none; background:none; border:0; color:#fff; font-size:22px; cursor:pointer; }
+
+/* ---------- account switch (login / profile / logout) ---------- */
+.account-switch{ position:relative; flex:none; }
+.account-btn{
+  width:36px; height:36px; border-radius:50%; border:2px solid var(--amber);
+  background:rgba(255,255,255,.08); color:#fff; cursor:pointer; padding:0; overflow:hidden;
+  display:flex; align-items:center; justify-content:center; font-size:19px;
+}
+.account-btn:hover{ background:rgba(255,255,255,.18); }
+.account-btn img{ width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.account-menu{
+  position:absolute; top:calc(100% + 10px); right:0; background:var(--card); border:1px solid var(--border);
+  border-radius:12px; box-shadow:var(--shadow-pop); padding:6px; min-width:172px; display:none; z-index:55;
+}
+.account-menu.open{ display:block; }
+.account-menu-name{
+  padding:8px 11px 7px; font-size:13px; font-weight:600; color:var(--ink);
+  border-bottom:1px solid var(--border); margin-bottom:4px; word-break:break-word;
+}
+.account-menu a, .account-menu button{
+  display:flex; align-items:center; gap:10px; width:100%; text-align:left; padding:9px 11px; border-radius:8px;
+  border:none; background:none; cursor:pointer; font-size:13.5px; color:var(--ink); font-family:var(--font-bn);
+}
+.account-menu a:hover, .account-menu button:hover{ background:var(--paper); }
+.account-menu i{ width:16px; text-align:center; }
 
 /* ---------- theme switcher ---------- */
 .theme-switch{ position:relative; flex:none; }
@@ -310,6 +328,7 @@ img{ max-width:100%; display:block; }
 .qcard{
   background:var(--card); border:1px solid var(--border); border-radius:var(--radius-lg);
   box-shadow:var(--shadow-card); padding:28px; margin:22px 0;
+  user-select:none; -webkit-user-select:none; -moz-user-select:none; -ms-user-select:none;
 }
 .qcard .qno{
   font-family:var(--font-en); font-weight:700; color:var(--green-deep); font-size:13px;
@@ -501,3 +520,64 @@ tr:last-child td{ border-bottom:none; }
 .flex-between{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
 .mt-0{ margin-top:0; }
 .center{ text-align:center; }
+
+/* ============================================================
+   Solve sheet (print / A4). This page is always rendered in a
+   fixed light palette — it should look the same on paper no
+   matter what theme the site is in, so colors below are hard
+   coded rather than pulled from the (possibly dark) --tokens.
+   ============================================================ */
+.print-toolbar{
+  position:sticky; top:0; z-index:40; background:var(--green-deep); color:#fff;
+  padding:12px 20px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+}
+.print-toolbar .ptb-title{ font-size:14.5px; font-weight:600; }
+.print-toolbar .ptb-actions{ display:flex; gap:10px; flex-wrap:wrap; }
+
+.print-wrap{ background:#DDD9CB; padding:26px 14px 60px; min-height:100vh; }
+[data-theme="dark"] .print-wrap{ background:#0A100D; }
+
+.print-page{
+  max-width:210mm; min-height:297mm; margin:0 auto; background:#fff; color:#161616;
+  padding:14mm 12mm; box-sizing:border-box; position:relative; overflow:hidden;
+  box-shadow:0 6px 24px rgba(0,0,0,.25); font-family:var(--font-bn);
+}
+
+.watermark-layer{
+  position:absolute; inset:-20%; z-index:0; pointer-events:none; overflow:hidden;
+  display:flex; flex-wrap:wrap; align-content:flex-start; opacity:.07;
+  transform:rotate(-28deg); font-family:var(--font-en);
+}
+.watermark-layer span{ font-size:20px; font-weight:800; color:#0B4F3F; white-space:nowrap; margin:22px 30px; }
+
+.print-content{ position:relative; z-index:1; }
+
+.print-header{ text-align:center; border-bottom:2.5px solid #0B4F3F; padding-bottom:12px; margin-bottom:18px; }
+.print-header .pbrand{ font-family:var(--font-en); font-weight:800; font-size:13px; letter-spacing:1px; color:#0B4F3F; text-transform:uppercase; }
+.print-header .pcourse{ font-size:12.5px; color:#555; margin-top:2px; }
+.print-header h1{ font-size:19px; margin:8px 0 2px; color:#161616; }
+.print-header .pmeta{ font-size:11px; color:#777; margin-top:4px; font-family:var(--font-en); }
+
+.print-columns{ column-count:2; column-gap:24px; }
+.print-q{ break-inside:avoid; -webkit-column-break-inside:avoid; margin-bottom:13px; font-size:12px; line-height:1.5; color:#1b1b1b; }
+.print-q .pqn{ font-weight:700; color:#0B4F3F; font-family:var(--font-en); font-size:11.5px; }
+.print-q .pqtext{ margin:3px 0 5px; }
+.print-q .puddipok{ font-size:11px; color:#444; background:#F1EEE2; border-left:3px solid #D99A2B; padding:5px 8px; margin-bottom:5px; border-radius:3px; }
+.print-q .popts{ margin:0 0 5px; padding:0; list-style:none; }
+.print-q .popts li{ margin-bottom:2px; }
+.print-q .popts li.pcorrect{ font-weight:700; color:#0B4F3F; }
+.print-q .popts li.pcorrect::before{ content:"\\2713  "; }
+.print-q .pexplain{ font-size:10.8px; color:#3a3a3a; background:#F1EEE2; padding:5px 7px; border-radius:4px; margin-top:3px; }
+.print-q .pexplain b{ color:#0B4F3F; }
+
+.print-footer-note{ text-align:center; font-size:10px; color:#999; margin-top:20px; font-family:var(--font-en); }
+
+@page{ size:A4; margin:12mm; }
+@media print{
+  body{ background:#fff !important; }
+  .topnav, .site-footer, .print-toolbar, .no-print{ display:none !important; }
+  .print-wrap{ background:#fff !important; padding:0; min-height:0; }
+  .print-page{ box-shadow:none; margin:0; max-width:none; min-height:0; padding:0; }
+  .watermark-layer{ position:fixed; inset:-20%; }
+  a{ color:inherit; text-decoration:none; }
+}
