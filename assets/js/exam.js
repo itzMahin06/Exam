@@ -94,8 +94,19 @@ let submitted = false;
 
 document.getElementById("examTitle").textContent = exam.title || "পরীক্ষা";
 
+// ---------- negative marking notice ----------
+const isSecondTimerForNotice = freshProfile?.secondTimer === "yes";
+const noticePenalty = (Number(exam.negativeMark) || 0) + (isSecondTimerForNotice ? (Number(exam.secondTimerNegative) || 0) : 0);
+const negativeNoticeHtml = noticePenalty > 0
+  ? `<div class="banner error" style="margin:14px 0 0;">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      প্রতিটি ভুল উত্তরে <b>-${noticePenalty}</b> নম্বর কাটা যাবে
+      ${isSecondTimerForNotice && exam.secondTimerNegative ? ` (এর মধ্যে ২য় টাইমার হিসেবে বাড়তি -${exam.secondTimerNegative} অন্তর্ভুক্ত)` : ""}।
+    </div>`
+  : "";
+
 // ---------- render questions ----------
-examBody.innerHTML = questions.map((q, i) => `
+examBody.innerHTML = negativeNoticeHtml + questions.map((q, i) => `
   <div class="qcard" id="q-${i}" data-qi="${i}">
     <span class="qno">প্রশ্ন ${i + 1} / ${questions.length}</span>
     ${q.uddipok ? `<div class="uddipok">${q.uddipok}</div>` : ""}
@@ -239,8 +250,11 @@ async function finishExam(auto) {
   });
 
   const total = questions.length;
-  const score = correct; // 1 mark per correct question
-  const percentage = total ? Math.round((correct / total) * 1000) / 10 : 0;
+  const isSecondTimer = freshProfile?.secondTimer === "yes";
+  const perWrongPenalty = (Number(exam.negativeMark) || 0) + (isSecondTimer ? (Number(exam.secondTimerNegative) || 0) : 0);
+  const rawScore = correct - (wrong * perWrongPenalty);
+  const score = Math.round(rawScore * 100) / 100; // keep up to 2 decimals, e.g. -0.25 marks
+  const percentage = total ? Math.round((score / total) * 1000) / 10 : 0;
 
   const resultDoc = {
     uid: user.uid,
@@ -249,6 +263,7 @@ async function finishExam(auto) {
     examTitle: exam.title || "পরীক্ষা",
     courseId: exam.courseId || "",
     correct, wrong, unanswered, total, score, percentage,
+    negativeMarkApplied: perWrongPenalty,
     timestamp: serverTimestamp()
   };
 
@@ -289,7 +304,7 @@ async function finishExam(auto) {
     examTitle: exam.title, correct, wrong, unanswered, total, score, percentage, review, isFirstAttempt
   }));
 
-  location.href = `result.html?examId=${encodeURIComponent(examId)}`;
+  location.href = `result.html?examId=${encodeURIComponent(examId)}&courseId=${encodeURIComponent(exam.courseId || "")}`;
 }
 
 window.addEventListener("beforeunload", (e) => {
