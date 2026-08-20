@@ -69,6 +69,7 @@
 
   const params = new URLSearchParams(location.search);
   const examId = params.get("examId") || "";
+  const courseIdParam = params.get("courseId") || "";
   const raw = sessionStorage.getItem("mc_review");
   const body = document.getElementById("resultBody");
 
@@ -105,7 +106,7 @@
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           ${examId ? `<a href="exam.html?id=${encodeURIComponent(examId)}" class="btn btn-outline btn-sm"><i class="fa-solid fa-rotate-right"></i> আবার পরীক্ষা দাও</a>` : ""}
           ${examId ? `<a href="solve-sheet.html?id=${encodeURIComponent(examId)}" target="_blank" class="btn btn-primary btn-sm"><i class="fa-solid fa-file-arrow-down"></i> সমাধান শীট</a>` : ""}
-          ${examId ? `<a href="leaderboard.html?examId=${encodeURIComponent(examId)}" class="btn btn-amber btn-sm"><i class="fa-solid fa-trophy"></i> লিডারবোর্ড দেখো</a>` : ""}
+          ${examId ? `<a href="leaderboard.html?courseId=${encodeURIComponent(courseIdParam)}" class="btn btn-amber btn-sm"><i class="fa-solid fa-trophy"></i> লিডারবোর্ড দেখো</a>` : ""}
         </div>
       </div>
 
