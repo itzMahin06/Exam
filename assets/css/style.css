@@ -566,7 +566,7 @@ tr:last-child td{ border-bottom:none; }
 .print-q .popts{ margin:0 0 5px; padding:0; list-style:none; }
 .print-q .popts li{ margin-bottom:2px; }
 .print-q .popts li.pcorrect{ font-weight:700; color:#0B4F3F; }
-.print-q .popts li.pcorrect::before{ content:"\\2713  "; }
+.print-q .popts li.pcorrect::before{ content:"\2713  "; }
 .print-q .pexplain{ font-size:10.8px; color:#3a3a3a; background:#F1EEE2; padding:5px 7px; border-radius:4px; margin-top:3px; }
 .print-q .pexplain b{ color:#0B4F3F; }
 
