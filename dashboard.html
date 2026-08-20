@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<script>
+(function(){
+  try{
+    var pref = localStorage.getItem('mc_theme') || 'system';
+    var dark = pref === 'night' || (pref === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  }catch(e){}
+})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>আমার ফলাফল | Exam - MAHIN'S CLASSROOM</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body>
+
+<header class="topnav">
+  <div class="topnav-inner">
+    <a href="index.html" class="brand">
+      <span class="brand-mark">MC</span>
+      <span class="brand-text"><b>MAHIN'S CLASSROOM</b><span>Exam</span></span>
+    </a>
+    <div class="theme-switch">
+      <button class="theme-btn" data-theme-btn aria-label="থিম পরিবর্তন করো"><i class="fa-solid fa-circle-half-stroke"></i></button>
+      <div class="theme-menu" data-theme-menu>
+        <button data-theme-choice="day"><i class="fa-solid fa-sun"></i> Day</button>
+        <button data-theme-choice="night"><i class="fa-solid fa-moon"></i> Night</button>
+        <button data-theme-choice="system"><i class="fa-solid fa-circle-half-stroke"></i> System</button>
+      </div>
+    </div>
+    <button class="nav-toggle" data-nav-toggle aria-label="মেনু"><i class="fa-solid fa-bars"></i></button>
+    <nav class="nav-links" data-nav-links>
+      <a href="index.html">হোম</a>
+      <a href="courses.html">কোর্সসমূহ</a>
+      <a href="leaderboard.html">লিডারবোর্ড</a>
+      <a href="dashboard.html">আমার ফলাফল</a>
+      <a href="profile.html">প্রোফাইল</a>
+      <a href="admin.html" data-nav-admin style="display:none">অ্যাডমিন</a>
+    </nav>
+    <div class="account-switch">
+      <button class="account-btn" data-account-btn aria-label="অ্যাকাউন্ট">
+        <img data-nav-avatar alt="" style="display:none">
+        <i class="fa-solid fa-circle-user" data-nav-guest-icon></i>
+      </button>
+      <div class="account-menu" data-account-menu>
+        <div class="account-menu-name" data-nav-name style="display:none"></div>
+        <a href="profile.html" data-account-profile-link style="display:none"><i class="fa-solid fa-user"></i> প্রোফাইল</a>
+        <a href="login.html" data-account-login-link><i class="fa-solid fa-right-to-bracket"></i> লগইন করো</a>
+        <button data-nav-logout style="display:none"><i class="fa-solid fa-right-from-bracket"></i> লগআউট</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="shell" style="padding-bottom:70px;">
+  <div class="page-head flex-between">
+    <div>
+      <h1>আমার ফলাফল</h1>
+      <p>তোমার আগের সব পরীক্ষার ফলাফল এখানে দেখতে পাবে।</p>
+    </div>
+    <div style="display:flex; gap:8px;">
+      <a href="courses.html" class="btn btn-primary btn-sm">কোর্সসমূহ দেখো</a>
+      <button class="btn btn-outline btn-sm" id="refreshBtn"><i class="fa-solid fa-rotate"></i> রিফ্রেশ</button>
+    </div>
+  </div>
+
+  <div id="myResults"></div>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-links">
+    <a href="about.html">আমাদের সম্পর্কে</a>
+    <a href="contact.html">যোগাযোগ</a>
+    <a href="privacy-policy.html">প্রাইভেসি পলিসি</a>
+    <a href="refund-policy.html">রিফান্ড পলিসি</a>
+  </div>
+  <p>©MAHIN'S CLASSROOM</p>
+</footer>
+
+<div class="modal-backdrop" id="resultModalBackdrop">
+  <div class="nav-popup" style="max-width:420px;">
+    <div class="nav-popup-head">
+      <h3>প্রথম চেষ্টার ফলাফল</h3>
+      <button class="nav-popup-close" id="resultModalClose"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="resultModalBody"></div>
+  </div>
+</div>
+
+<script type="module">
+  import { getFirebase, doc, getDoc } from "./assets/js/firebase-init.js";
+  import { guardPage } from "./assets/js/auth.js";
+  import { getMyResults } from "./assets/js/results.js";
+  import { Cache } from "./assets/js/cache.js";
+
+  const { user } = await guardPage({ needAuth: true, needProfile: true });
+  if (!user) throw new Error("redirecting");
+
+  const myResultsEl = document.getElementById("myResults");
+  let resultsByExam = {};
+
+  async function loadCourseNames() {
+    let courses = Cache.get("coursesIndex");
+    if (!courses) {
+      const { db } = await getFirebase();
+      const snap = await getDoc(doc(db, "meta", "coursesIndex"));
+      courses = snap.exists() ? (snap.data().courses || []) : [];
+      Cache.set("coursesIndex", courses);
+    }
+    const map = {};
+    courses.forEach(c => { map[c.id] = c.name; });
+    return map;
+  }
+
+  async function loadMyResults(force = false) {
+    myResultsEl.innerHTML = `<div class="loader"><span class="spinner"></span> লোড হচ্ছে...</div>`;
+    let results, courseNames;
+    try {
+      [results, courseNames] = await Promise.all([getMyResults(user.uid, force), loadCourseNames()]);
+    } catch (err) {
+      console.error("Failed to load results:", err);
+      myResultsEl.innerHTML = `<div class="banner error">ফলাফল লোড করা যায়নি: ${escapeHtml(err.message)}</div>`;
+      return;
+    }
+    if (!results.length) {
+      myResultsEl.innerHTML = `<div class="empty-state"><div class="ico"><i class="fa-solid fa-folder-open"></i></div><p>এখনো কোনো পরীক্ষা দাওনি।</p><a class="btn btn-primary" href="courses.html">কোর্সসমূহ দেখো</a></div>`;
+      return;
+    }
+
+    resultsByExam = {};
+    results.forEach(r => { resultsByExam[r.examId] = r; });
+
+    // Group results by course so the list reads "course wise" rather than a
+    // flat exam-by-exam list.
+    const groups = new Map(); // courseId -> { name, results: [] }
+    results.forEach(r => {
+      const cid = r.courseId || "__none__";
+      if (!groups.has(cid)) groups.set(cid, { name: courseNames[cid] || "কোর্সবিহীন পরীক্ষা", results: [] });
+      groups.get(cid).results.push(r);
+    });
+
+    myResultsEl.innerHTML = Array.from(groups.values()).map(group => {
+      const totalScore = Math.round(group.results.reduce((s, r) => s + (r.score || 0), 0) * 100) / 100;
+      return `
+      <div class="result-course-group">
+        <div class="result-course-head">
+          <h2>${escapeHtml(group.name)}</h2>
+          <span class="chip">মোট স্কোর: ${totalScore}</span>
+        </div>
+        <div class="exam-list">
+          ${group.results.map(r => `
+            <div class="exam-item">
+              <div>
+                <h3>${escapeHtml(r.examTitle || "পরীক্ষা")}</h3>
+                <div class="exam-meta">
+                  <span><i class="fa-solid fa-circle-check"></i> ${r.correct}</span><span><i class="fa-solid fa-circle-xmark"></i> ${r.wrong}</span><span><i class="fa-solid fa-minus"></i> ${r.unanswered}</span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <span class="chip">স্কোর: ${r.score}/${r.total}</span>
+                <button class="btn btn-outline btn-sm" data-see-result="${r.examId}"><i class="fa-solid fa-chart-simple"></i> ১ম চেষ্টার ফলাফল</button>
+                <a class="btn btn-outline btn-sm" href="exam.html?id=${encodeURIComponent(r.examId)}"><i class="fa-solid fa-rotate-right"></i> আবার দাও</a>
+                <a class="btn btn-primary btn-sm" href="solve-sheet.html?id=${encodeURIComponent(r.examId)}" target="_blank"><i class="fa-solid fa-file-arrow-down"></i> সমাধান শীট</a>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      </div>`;
+    }).join("");
+
+    document.querySelectorAll("[data-see-result]").forEach(btn => {
+      btn.addEventListener("click", () => showResultModal(resultsByExam[btn.dataset.seeResult]));
+    });
+  }
+
+  function showResultModal(r) {
+    if (!r) return;
+    document.getElementById("resultModalBody").innerHTML = `
+      <div class="result-hero" style="padding:22px 16px;">
+        <div class="small-note" style="color:#CFE3DA;">${escapeHtml(r.examTitle || "")}</div>
+        <div class="score">${r.score}<span class="out-of">/${r.total}</span></div>
+        <div class="out-of">প্রথম চেষ্টার ফলাফল — ${r.percentage}%</div>
+      </div>
+      <div class="result-stats">
+        <div class="stat-box correct"><b>${r.correct}</b><span>সঠিক</span></div>
+        <div class="stat-box wrong"><b>${r.wrong}</b><span>ভুল</span></div>
+        <div class="stat-box skip"><b>${r.unanswered}</b><span>বাদ দেওয়া</span></div>
+      </div>
+    `;
+    document.getElementById("resultModalBackdrop").classList.add("open");
+  }
+  document.getElementById("resultModalClose").addEventListener("click", () => document.getElementById("resultModalBackdrop").classList.remove("open"));
+  document.getElementById("resultModalBackdrop").addEventListener("click", (e) => { if (e.target.id === "resultModalBackdrop") e.currentTarget.classList.remove("open"); });
+
+  document.getElementById("refreshBtn").addEventListener("click", () => {
+    Cache.remove("myresults_" + user.uid);
+    Cache.remove("coursesIndex");
+    loadMyResults(true);
+  });
+
+  function escapeHtml(s){ const d=document.createElement("div"); d.textContent = s||""; return d.innerHTML; }
+
+  loadMyResults();
+</script>
+</body>
+</html>

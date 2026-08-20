@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<script>
+(function(){
+  try{
+    var pref = localStorage.getItem('mc_theme') || 'system';
+    var dark = pref === 'night' || (pref === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  }catch(e){}
+})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>আমাদের সম্পর্কে | Exam - MAHIN'S CLASSROOM</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body>
+
+<header class="topnav">
+  <div class="topnav-inner">
+    <a href="index.html" class="brand">
+      <span class="brand-mark">MC</span>
+      <span class="brand-text"><b>MAHIN'S CLASSROOM</b><span>Exam</span></span>
+    </a>
+    <div class="theme-switch">
+      <button class="theme-btn" data-theme-btn aria-label="থিম পরিবর্তন করো"><i class="fa-solid fa-circle-half-stroke"></i></button>
+      <div class="theme-menu" data-theme-menu>
+        <button data-theme-choice="day"><i class="fa-solid fa-sun"></i> Day</button>
+        <button data-theme-choice="night"><i class="fa-solid fa-moon"></i> Night</button>
+        <button data-theme-choice="system"><i class="fa-solid fa-circle-half-stroke"></i> System</button>
+      </div>
+    </div>
+    <button class="nav-toggle" data-nav-toggle aria-label="মেনু"><i class="fa-solid fa-bars"></i></button>
+    <nav class="nav-links" data-nav-links>
+      <a href="index.html">হোম</a>
+      <a href="courses.html">কোর্সসমূহ</a>
+      <a href="leaderboard.html">লিডারবোর্ড</a>
+      <a href="dashboard.html">আমার ফলাফল</a>
+      <a href="profile.html">প্রোফাইল</a>
+      <a href="admin.html" data-nav-admin style="display:none">অ্যাডমিন</a>
+    </nav>
+    <div class="account-switch">
+      <button class="account-btn" data-account-btn aria-label="অ্যাকাউন্ট">
+        <img data-nav-avatar alt="" style="display:none">
+        <i class="fa-solid fa-circle-user" data-nav-guest-icon></i>
+      </button>
+      <div class="account-menu" data-account-menu>
+        <div class="account-menu-name" data-nav-name style="display:none"></div>
+        <a href="profile.html" data-account-profile-link style="display:none"><i class="fa-solid fa-user"></i> প্রোফাইল</a>
+        <a href="login.html" data-account-login-link><i class="fa-solid fa-right-to-bracket"></i> লগইন করো</a>
+        <button data-nav-logout style="display:none"><i class="fa-solid fa-right-from-bracket"></i> লগআউট</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="shell-narrow" style="padding:36px 20px 60px;">
+  <div class="page-head">
+    <h1><i class="fa-solid fa-graduation-cap"></i> আমাদের সম্পর্কে</h1>
+  </div>
+  <div class="card">
+    <p>
+      <b>MAHIN'S CLASSROOM</b> একটি অনলাইন পরীক্ষা প্ল্যাটফর্ম, যেখানে এইচএসসি শিক্ষার্থীরা
+      ইঞ্জিনিয়ারিং, মেডিকেল ও ভার্সিটি ভর্তি পরীক্ষার প্রস্তুতির জন্য নিয়মিত বোর্ড-ধাঁচের
+      মডেল টেস্ট দিতে পারে।
+    </p>
+    <p>
+      প্রতিটি পরীক্ষা শেষে শিক্ষার্থীরা সাথে সাথে নিজের স্কোর, সঠিক-ভুল উত্তরের বিশ্লেষণ এবং
+      লিডারবোর্ডে নিজের অবস্থান দেখতে পায়। প্রতিটি প্রশ্নের বিস্তারিত ব্যাখ্যাসহ একটি প্রিন্ট-যোগ্য
+      সমাধান শীটও ডাউনলোড করা যায়, যাতে ভুলগুলো থেকে সহজে শেখা যায়।
+    </p>
+    <p>
+      আমাদের লক্ষ্য হলো, শিক্ষার্থীদের হাতে একটি সহজ, নির্ভরযোগ্য ও শৃঙ্খলাবদ্ধ প্রস্তুতির
+      মাধ্যম তুলে দেওয়া — যাতে তারা আসল পরীক্ষার আগেই নিজেদের প্রস্তুতি যাচাই করে নিতে পারে।
+    </p>
+    <p style="margin:0;">
+      কোনো প্রশ্ন বা মতামত থাকলে আমাদের <a href="contact.html" style="color:var(--green-mid); font-weight:600;">যোগাযোগ পাতা</a> থেকে জানাতে পারো।
+    </p>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-links">
+    <a href="about.html">আমাদের সম্পর্কে</a>
+    <a href="contact.html">যোগাযোগ</a>
+    <a href="privacy-policy.html">প্রাইভেসি পলিসি</a>
+    <a href="refund-policy.html">রিফান্ড পলিসি</a>
+  </div>
+  <p>©MAHIN'S CLASSROOM</p>
+</footer>
+
+<script type="module">
+  import { guardPage } from "./assets/js/auth.js";
+  guardPage({});
+</script>
+</body>
+</html>

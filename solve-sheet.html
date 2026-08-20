@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<script>
+(function(){
+  try{
+    var pref = localStorage.getItem('mc_theme') || 'system';
+    var dark = pref === 'night' || (pref === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  }catch(e){}
+})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>সমাধান শীট | Exam - MAHIN'S CLASSROOM</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body>
+
+<div class="print-toolbar no-print">
+  <span class="ptb-title"><i class="fa-solid fa-file-lines"></i> সমাধান শীট</span>
+  <div class="ptb-actions">
+    <a href="#" id="backLink" class="btn btn-outline btn-sm" style="color:#fff; border-color:rgba(255,255,255,.4);">ফিরে যাও</a>
+    <button class="btn btn-amber btn-sm" id="printBtn"><i class="fa-solid fa-print"></i> প্রিন্ট / ডাউনলোড করো</button>
+  </div>
+</div>
+
+<div class="print-wrap">
+  <div id="sheetRoot">
+    <div class="loader"><span class="spinner"></span> লোড হচ্ছে...</div>
+  </div>
+</div>
+
+<script type="module">
+  import { getFirebase, doc, getDoc, collection, getDocs, query, where, limit } from "./assets/js/firebase-init.js";
+  import { guardPage } from "./assets/js/auth.js";
+  import { Cache } from "./assets/js/cache.js";
+
+  const { user } = await guardPage({ needAuth: true, needProfile: true });
+  if (!user) throw new Error("redirecting");
+
+  const params = new URLSearchParams(location.search);
+  const examId = params.get("id");
+  const root = document.getElementById("sheetRoot");
+  document.getElementById("backLink").href = "dashboard.html";
+
+  function escapeHtml(s){ const d=document.createElement("div"); d.textContent = s||""; return d.innerHTML; }
+
+  function lockedMessage(msg) {
+    root.innerHTML = `
+      <div class="shell-narrow" style="padding:60px 20px;">
+        <div class="empty-state">
+          <div class="ico"><i class="fa-solid fa-lock"></i></div>
+          <p>${msg}</p>
+          <a class="btn btn-primary" href="courses.html">কোর্সসমূহ দেখো</a>
+        </div>
+      </div>`;
+  }
+
+  if (!examId) {
+    lockedMessage("কোনো পরীক্ষা নির্বাচন করা হয়নি।");
+    throw new Error("missing exam id");
+  }
+
+  const { db } = await getFirebase();
+
+  // Gate: the solve sheet only opens once the student has attempted this
+  // exam at least once (checked directly against Firestore, not the cache,
+  // so this can't be bypassed by an empty/stale local cache).
+  let attempted = false;
+  try {
+    const snap = await getDocs(query(
+      collection(db, "results"),
+      where("uid", "==", user.uid),
+      where("examId", "==", examId),
+      limit(1)
+    ));
+    attempted = !snap.empty;
+  } catch (err) {
+    console.error("Could not verify attempt:", err);
+  }
+
+  if (!attempted) {
+    lockedMessage("সমাধান শীট দেখতে হলে আগে অন্তত একবার এই পরীক্ষাটি সম্পন্ন করতে হবে।");
+    throw new Error("not attempted yet");
+  }
+
+  // Load the exam itself (cache-first, same key exam.js uses).
+  async function loadExam() {
+    const key = "exam_" + examId;
+    let exam = Cache.get(key);
+    if (!exam) {
+      const snap = await getDoc(doc(db, "exams", examId));
+      if (!snap.exists()) return null;
+      exam = { id: examId, ...snap.data() };
+      Cache.set(key, exam);
+    }
+    return exam;
+  }
+
+  const exam = await loadExam();
+  if (!exam || !Array.isArray(exam.questions)) {
+    lockedMessage("এই পরীক্ষাটি খুঁজে পাওয়া যায়নি।");
+    throw new Error("exam not found");
+  }
+
+  document.getElementById("backLink").href = "course.html?id=" + encodeURIComponent(exam.courseId || "");
+
+  const watermark = Array.from({ length: 400 }).map(() => `<span>©MAHIN'S CLASSROOM</span>`).join("");
+
+  const questionsHtml = exam.questions.map((q, i) => `
+    <div class="print-q">
+      <div class="pqn">প্রশ্ন ${i + 1}</div>
+      ${q.uddipok ? `<div class="puddipok">${q.uddipok}</div>` : ""}
+      <div class="pqtext">${q.question || ""}</div>
+      <ul class="popts">
+        ${["A", "B", "C", "D"].filter(k => q.options && q.options[k] !== undefined).map(k => `
+          <li class="${k === q.correct_answer ? "pcorrect" : ""}">${k}. ${q.options[k]}</li>
+        `).join("")}
+      </ul>
+      ${q.explanation ? `<div class="pexplain"><b>ব্যাখ্যা:</b> ${q.explanation}</div>` : ""}
+    </div>
+  `).join("");
+
+  root.innerHTML = `
+    <div class="print-page">
+      <div class="watermark-layer">${watermark}</div>
+      <div class="print-content">
+        <div class="print-header">
+          <div class="pbrand">MAHIN'S CLASSROOM</div>
+          <h1>${escapeHtml(exam.title || "পরীক্ষা")}</h1>
+          <div class="pcourse">${escapeHtml(exam.courseName || "")}</div>
+          <div class="pmeta">মোট প্রশ্ন: ${exam.questions.length} &nbsp;•&nbsp; সময়: ${exam.duration || 0} মিনিট &nbsp;•&nbsp; সমাধান শীট</div>
+        </div>
+        <div class="print-columns">${questionsHtml}</div>
+        <div class="print-footer-note">© MAHIN'S CLASSROOM — mahinsclassroom</div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("printBtn").addEventListener("click", () => window.print());
+</script>
+</body>
+</html>
