@@ -60,7 +60,7 @@
 <main class="shell-narrow" style="padding:30px 20px 70px;">
   <div class="page-head">
     <h1>লিডারবোর্ড</h1>
-    <p>একটি কোর্স বেছে নাও — সেই কোর্সের সব পরীক্ষা মিলিয়ে মোট স্কোর অনুযায়ী র‍্যাংকিং দেখবে।</p>
+    <p>একটি কোর্স বেছে নাও — সেই কোর্সের প্রতিটি পরীক্ষার আলাদা লিডারবোর্ড এখানে দেখতে পাবে।</p>
   </div>
 
   <div class="field">
@@ -68,8 +68,8 @@
     <select id="courseSelect"></select>
   </div>
 
-  <div class="flex-between" style="margin-bottom:10px;">
-    <span class="small-note" id="participantCount">লোড হচ্ছে...</span>
+  <div class="flex-between" style="margin-bottom:14px;">
+    <span class="small-note" id="examCount"></span>
     <button class="btn btn-outline btn-sm" id="refreshBtn"><i class="fa-solid fa-rotate"></i> রিফ্রেশ</button>
   </div>
 
@@ -96,10 +96,12 @@
 
   const courseSelect = document.getElementById("courseSelect");
   const lbList = document.getElementById("lbList");
+  const examCountEl = document.getElementById("examCount");
   const params = new URLSearchParams(location.search);
   const preselectCourse = params.get("courseId") || params.get("examId"); // examId kept for old links, resolved below
 
   let myCourses = [];
+  let allExams = [];
 
   async function loadCourseOptions() {
     try {
@@ -111,6 +113,14 @@
         courses = snap.exists() ? (snap.data().courses || []) : [];
         Cache.set("coursesIndex", courses);
       }
+
+      let exams = Cache.get("examsIndex");
+      if (!exams) {
+        const snap = await getDoc(doc(db, "meta", "examsIndex"));
+        exams = snap.exists() ? (snap.data().exams || []) : [];
+        Cache.set("examsIndex", exams);
+      }
+      allExams = exams;
 
       // Only courses the student actually has access to (free, or approved
       // enrollment) — matches what they can otherwise see on course.html.
@@ -129,80 +139,92 @@
         initialCourseId = preselectCourse;
       } else if (preselectCourse) {
         // maybe an old-style ?examId= link — resolve to its course
-        let exams = Cache.get("examsIndex");
-        if (!exams) {
-          const snap = await getDoc(doc(db, "meta", "examsIndex"));
-          exams = snap.exists() ? (snap.data().exams || []) : [];
-          Cache.set("examsIndex", exams);
-        }
         const ex = exams.find(e => e.id === preselectCourse);
         if (ex && myCourses.some(c => c.id === ex.courseId)) initialCourseId = ex.courseId;
       }
       if (initialCourseId) courseSelect.value = initialCourseId;
 
-      loadLeaderboard(courseSelect.value);
+      loadCourseLeaderboards(courseSelect.value);
     } catch (err) {
       console.error("Failed to load course list:", err);
       lbList.innerHTML = `<div class="banner error">কোর্সের তালিকা লোড করা যায়নি: ${escapeHtml(err.message)}</div>`;
     }
   }
 
-  async function loadLeaderboard(courseId, force = false) {
+  async function loadCourseLeaderboards(courseId, force = false) {
     if (!courseId) return;
-    const key = "leaderboard_course_" + courseId;
+    const courseExams = allExams.filter(e => e.courseId === courseId);
+
+    if (!courseExams.length) {
+      examCountEl.textContent = "";
+      lbList.innerHTML = `<div class="empty-state"><div class="ico"><i class="fa-solid fa-inbox"></i></div><p>এই কোর্সে এখনো কোনো পরীক্ষা যোগ করা হয়নি।</p></div>`;
+      return;
+    }
+
+    examCountEl.textContent = `${courseExams.length} টি পরীক্ষা`;
+    lbList.innerHTML = courseExams.map(ex => `
+      <div class="lb-exam-group" data-exam-group="${ex.id}">
+        <div class="lb-exam-head">
+          <h2>${escapeHtml(ex.title)}</h2>
+          <span class="small-note" data-exam-count="${ex.id}">লোড হচ্ছে...</span>
+        </div>
+        <div data-exam-rows="${ex.id}"><div class="loader"><span class="spinner"></span> লোড হচ্ছে...</div></div>
+      </div>
+    `).join("");
+
+    // Each exam's leaderboard is a single equality-filtered read, cached
+    // independently so revisiting this course later costs nothing until
+    // "রিফ্রেশ" is tapped.
+    await Promise.all(courseExams.map(ex => loadExamLeaderboard(ex.id, force)));
+  }
+
+  async function loadExamLeaderboard(examId, force = false) {
+    const key = "leaderboard_" + examId;
     let rows = force ? null : Cache.get(key);
     if (!rows) {
-      lbList.innerHTML = `<div class="loader"><span class="spinner"></span> লোড হচ্ছে...</div>`;
       try {
         const { db } = await getFirebase();
-        // Equality-only filter — no composite index required.
-        // limit(3000) is a generous safety cap covering every attempt across
-        // every exam in this course, not a "top N" cutoff.
-        const q = query(collection(db, "results"), where("courseId", "==", courseId), limit(3000));
+        const q = query(collection(db, "results"), where("examId", "==", examId), limit(2000));
         const snap = await getDocs(q);
-        const raw = snap.docs.map(d => d.data());
-
-        // Aggregate per student: total score across every exam they've
-        // attempted in this course.
-        const byUid = new Map();
-        raw.forEach(r => {
-          const entry = byUid.get(r.uid) || { uid: r.uid, userName: r.userName || "শিক্ষার্থী", totalScore: 0, examsTaken: 0 };
-          entry.totalScore += (r.score || 0);
-          entry.examsTaken += 1;
-          byUid.set(r.uid, entry);
-        });
-        rows = Array.from(byUid.values());
-        rows.sort((a, b) => b.totalScore - a.totalScore);
-        rows.forEach(r => { r.totalScore = Math.round(r.totalScore * 100) / 100; });
+        rows = snap.docs.map(d => d.data());
+        rows.sort((a, b) => (b.score || 0) - (a.score || 0));
         Cache.set(key, rows);
       } catch (err) {
-        console.error("Failed to load leaderboard:", err);
-        lbList.innerHTML = `<div class="banner error">লিডারবোর্ড লোড করা যায়নি: ${escapeHtml(err.message)}</div>`;
+        console.error("Failed to load leaderboard for", examId, err);
+        const rowsEl = document.querySelector(`[data-exam-rows="${examId}"]`);
+        if (rowsEl) rowsEl.innerHTML = `<div class="banner error">লোড করা যায়নি: ${escapeHtml(err.message)}</div>`;
         return;
       }
     }
-    renderRows(rows);
+    renderExamRows(examId, rows);
   }
 
-  function renderRows(rows) {
-    document.getElementById("participantCount").textContent = `মোট ${rows.length} জন অংশ নিয়েছে`;
+  function renderExamRows(examId, rows) {
+    const countEl = document.querySelector(`[data-exam-count="${examId}"]`);
+    const rowsEl = document.querySelector(`[data-exam-rows="${examId}"]`);
+    if (!countEl || !rowsEl) return;
+
+    countEl.textContent = `${rows.length} জন অংশ নিয়েছে`;
     if (!rows.length) {
-      lbList.innerHTML = `<div class="empty-state"><div class="ico"><i class="fa-solid fa-trophy"></i></div><p>এই কোর্সে এখনো কেউ কোনো পরীক্ষা দেয়নি।</p></div>`;
+      rowsEl.innerHTML = `<p class="small-note" style="padding:4px 0 6px;">এখনো কেউ এই পরীক্ষাটি দেয়নি।</p>`;
       return;
     }
-    lbList.innerHTML = rows.map((r, i) => `
+    rowsEl.innerHTML = rows.map((r, i) => `
       <div class="lb-row ${i === 0 ? "top1" : i === 1 ? "top2" : i === 2 ? "top3" : ""} ${r.uid === user.uid ? "is-me" : ""}">
         <div class="lb-rank">${i + 1}</div>
-        <div class="lb-name">${escapeHtml(r.userName)}${r.uid === user.uid ? " (তুমি)" : ""}<div class="lb-sub">${r.examsTaken} টি পরীক্ষা দিয়েছে</div></div>
-        <div class="lb-score">${r.totalScore}</div>
+        <div class="lb-name">${escapeHtml(r.userName || "শিক্ষার্থী")}${r.uid === user.uid ? " (তুমি)" : ""}</div>
+        <div class="lb-score">${r.score}/${r.total}</div>
       </div>
     `).join("");
   }
 
-  courseSelect.addEventListener("change", () => loadLeaderboard(courseSelect.value));
+  courseSelect.addEventListener("change", () => loadCourseLeaderboards(courseSelect.value));
   document.getElementById("refreshBtn").addEventListener("click", () => {
     Cache.remove("coursesIndex");
-    if (courseSelect.value) Cache.remove("leaderboard_course_" + courseSelect.value);
+    Cache.remove("examsIndex");
+    if (courseSelect.value) {
+      allExams.filter(e => e.courseId === courseSelect.value).forEach(ex => Cache.remove("leaderboard_" + ex.id));
+    }
     loadCourseOptions();
   });
 
