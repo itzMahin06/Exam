@@ -290,25 +290,37 @@ async function loadExamsAdmin(force = false) {
     examsAdminList.innerHTML = `<div class="empty-state"><div class="ico"><i class="fa-solid fa-inbox"></i></div><p>এখনো কোনো পরীক্ষা যোগ করা হয়নি।</p></div>`;
     return;
   }
-  examsAdminList.innerHTML = list.map(ex => `
-    <div class="exam-item">
-      <div>
-        <h3>${escapeHtml(ex.title)}</h3>
-        <div class="exam-meta">
-          <span><i class="fa-solid fa-circle-question"></i> ${ex.totalQuestions || 0} টি প্রশ্ন</span>
-          <span><i class="fa-solid fa-clock"></i> ${ex.duration || 0} মিনিট</span>
-          ${ex.courseName ? `<span class="chip">${escapeHtml(ex.courseName)}</span>` : `<span class="small-note">কোনো কোর্স নেই</span>`}
-          ${ex.isFree ? `<span class="chip" style="background:var(--amber-soft); color:#8A5D0F;">ফ্রি</span>` : ""}
-          ${ex.negativeMark ? `<span class="chip" style="background:var(--wrong-soft); color:var(--wrong);">-${ex.negativeMark} নেগেটিভ</span>` : ""}
-          ${ex.secondTimerNegative ? `<span class="chip" style="background:var(--wrong-soft); color:var(--wrong);">২য় টাইমার -${ex.secondTimerNegative}</span>` : ""}
-        </div>
-      </div>
-      <div style="display:flex; gap:8px;">
-        <button class="btn btn-outline btn-sm" data-edit-exam="${ex.id}">সম্পাদনা</button>
-        <button class="btn btn-danger btn-sm" data-del="${ex.id}">ডিলিট করো</button>
-      </div>
+  examsAdminList.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>পরীক্ষা</th><th>কোর্স</th><th>প্রশ্ন</th><th>সময়</th><th>নেগেটিভ</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${list.map(ex => `
+            <tr>
+              <td class="wrap">
+                <div style="font-weight:600;">${escapeHtml(ex.title)}</div>
+                ${ex.isFree ? `<span class="small-note" style="color:var(--amber);">ফ্রি</span>` : ""}
+              </td>
+              <td>${ex.courseName ? escapeHtml(ex.courseName) : `<span class="small-note">—</span>`}</td>
+              <td>${ex.totalQuestions || 0}</td>
+              <td>${ex.duration || 0} মিনিট</td>
+              <td>${ex.negativeMark
+                ? `-${ex.negativeMark}${ex.secondTimerNegative ? ` <span class="small-note">(২য় টাইমার -${ex.secondTimerNegative})</span>` : ""}`
+                : `<span class="small-note">—</span>`}</td>
+              <td>
+                <button class="btn btn-outline btn-sm" data-edit-exam="${ex.id}">সম্পাদনা</button>
+                <button class="btn btn-danger btn-sm" data-del="${ex.id}">ডিলিট</button>
+              </td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
     </div>
-  `).join("");
+  `;
 
   examsAdminList.querySelectorAll("[data-del]").forEach(btn => {
     btn.addEventListener("click", () => deleteExam(btn.dataset.del));
