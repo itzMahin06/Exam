@@ -1,0 +1,29 @@
+@font-face {
+  font-family: "Tropika Island";
+  src:
+    url("./fonts/aiyari-tropika-island-int.woff2") format("woff2"),
+    url("./fonts/aiyari-tropika-island-int.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Tropika Island Script";
+  src:
+    url("./fonts/aiyari-tropika-island-script-casual.woff2") format("woff2"),
+    url("./fonts/aiyari-tropika-island-script-casual.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Tropika Island Extras";
+  src:
+    url("./fonts/aiyari-tropika-island-extras.woff2") format("woff2"),
+    url("./fonts/aiyari-tropika-island-extras.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
