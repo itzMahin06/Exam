@@ -116,8 +116,8 @@ img{ max-width:100%; display:block; }
   flex:none;
 }
 .brand-text{ display:flex; flex-direction:column; line-height:1.15; }
-.brand-text b{ font-family:var(--font-en); font-weight:700; font-size:15.5px; letter-spacing:.2px; }
-.brand-text span{ font-family:var(--font-bn); font-size:12.5px; color:#CFE3DA; }
+.brand-text b { font-family: "Tropika Island"; font-weight:700; font-size:15.5px; letter-spacing:.2px; }
+.brand-text span { font-family: "Tropika Island"; font-size:12.5px; color:#CFE3DA; }
 
 .nav-links{ display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
 .nav-links a{
