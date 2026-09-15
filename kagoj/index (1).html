@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>কাগজ — A4 পেজ পিডিএফ লেখক ও তৈরির টুল</title>
+
+<!-- UI chrome font (interface only, not document content) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- SolaimanLipi web font for Bangla document content -->
+<link rel="stylesheet" href="https://webfonts.maateen.me/solaiman-lipi/font.css">
+
+<style>
+  :root{
+    --ink-900:#1c2128;
+    --ink-800:#262c35;
+    --paper-bg:#e4e0d4;
+    --paper-white:#ffffff;
+    --line:#c9c2ae;
+    --line-soft:#d8d3c4;
+    --seal:#9c3b2a;
+    --seal-dark:#7e2f21;
+    --text-body:#262421;
+    --muted:#726b5c;
+    --panel:#f4f2ea;
+    --radius-sm:4px;
+    --radius-md:8px;
+
+    /* page setup (updated by JS) */
+    --page-w:210mm;
+    --page-h:297mm;
+    --m-top:20mm;
+    --m-right:20mm;
+    --m-bottom:20mm;
+    --m-left:20mm;
+  }
+
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{
+    margin:0;padding:0;
+    background:var(--paper-bg);
+    color:var(--text-body);
+    font-family:'Space Grotesk','Noto Sans Bengali',sans-serif;
+    height:100%;
+    overflow-x:hidden;
+  }
+  button, select, input{ font-family:inherit; }
+
+  /* ---------- Layout shell ---------- */
+  #app{ display:flex; flex-direction:column; min-height:100vh; }
+
+  header.topbar{
+    background:var(--ink-900);
+    color:#f2efe6;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 14px;
+    gap:8px;
+    position:sticky; top:0; z-index:40;
+    border-bottom:3px solid var(--seal);
+  }
+  .brand{ display:flex; align-items:baseline; gap:8px; min-width:0; }
+  .brand .mark{ font-weight:700; font-size:17px; letter-spacing:.2px; flex-shrink:0; }
+  .brand .mark span{ color:#e7b7a8; }
+  .brand .sub{ font-size:12px; color:#a9a297; display:none; white-space:nowrap; }
+  @media(min-width:700px){ .brand .sub{ display:inline; } .brand .mark{ font-size:19px; } header.topbar{ padding:12px 20px; } }
+
+  .topbar-actions{ display:flex; gap:6px; align-items:center; flex-shrink:0; }
+
+  .btn{
+    border:1px solid transparent;
+    background:#333a45;
+    color:#f2efe6;
+    padding:9px 12px;
+    border-radius:var(--radius-sm);
+    font-size:13.5px;
+    font-weight:500;
+    cursor:pointer;
+    display:inline-flex; align-items:center; gap:7px;
+    transition:background .15s ease, transform .05s ease;
+    white-space:nowrap;
+  }
+  .btn:hover{ background:#454e5c; }
+  .btn:active{ transform:translateY(1px); }
+  .btn-seal{ background:var(--seal); }
+  .btn-seal:hover{ background:var(--seal-dark); }
+  .btn-ghost{ background:transparent; border:1px solid #454e5c; }
+  .btn-ghost:hover{ background:#333a45; }
+  .btn:disabled{ opacity:.5; cursor:not-allowed; }
+  @media(max-width:700px){ .btn span.lbl{ display:none; } .btn{ padding:9px 10px; } }
+
+  /* ---------- Toolbar ribbon ---------- */
+  .ribbon{
+    background:var(--panel);
+    border-bottom:1px solid var(--line);
+    padding:7px 10px;
+    display:flex; gap:6px; align-items:center;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    position:sticky; top:53px; z-index:39;
+    scrollbar-width:thin;
+  }
+  @media(min-width:700px){ .ribbon{ top:58px; flex-wrap:wrap; overflow-x:visible; padding:8px 14px; } }
+
+  .rgroup{ display:flex; gap:2px; align-items:center; flex-shrink:0; padding:0 6px; border-right:1px solid var(--line-soft); }
+  .rgroup:last-child{ border-right:none; }
+
+  .ricon{
+    width:34px; height:34px;
+    display:inline-flex; align-items:center; justify-content:center;
+    border:1px solid transparent;
+    background:transparent;
+    border-radius:var(--radius-sm);
+    cursor:pointer;
+    color:var(--ink-900);
+    font-size:13.5px;
+    flex-shrink:0;
+  }
+  @media(min-width:700px){ .ricon{ width:32px; height:32px; } }
+  .ricon:hover{ background:#e5e0d0; }
+  .ricon.active{ background:var(--ink-900); color:#f2efe6; }
+  .rsel{
+    height:34px; border:1px solid var(--line); border-radius:var(--radius-sm);
+    background:#fff; padding:0 6px; font-size:12.5px; color:var(--ink-900); flex-shrink:0; max-width:120px;
+  }
+  input[type=color].rcolor{
+    width:34px;height:34px;border:1px solid var(--line);border-radius:var(--radius-sm);
+    padding:2px; background:#fff; cursor:pointer; flex-shrink:0;
+  }
+  .rlangbtn{ font-family:'Noto Sans Bengali','Space Grotesk',sans-serif; font-weight:600; font-size:12px; width:auto; padding:0 8px; }
+
+  /* ---------- Workspace ---------- */
+  .workspace{ flex:1; display:flex; justify-content:center; padding:20px 10px 50px; }
+  #pages{ display:flex; flex-direction:column; align-items:stretch; gap:22px; width:100%; max-width:var(--page-w); margin:0 auto; }
+
+  .page-shell{ position:relative; width:100%; }
+  .page-frame-label{
+    display:flex; justify-content:space-between; align-items:center;
+    width:100%;
+    margin-bottom:6px; font-size:12px; color:var(--muted);
+  }
+  .page-frame-label .del-page{
+    background:none; border:none; color:var(--seal); cursor:pointer; font-size:12px;
+    text-decoration:underline; padding:2px 4px;
+  }
+
+  .page{
+    width:100%;
+    min-height:60vh;
+    background:var(--paper-white);
+    box-shadow:0 1px 3px rgba(0,0,0,.15), 0 10px 30px rgba(0,0,0,.18);
+    position:relative;
+    overflow:hidden;
+    display:flex; flex-direction:column;
+  }
+  @media(min-width:880px){ .page{ min-height:var(--page-h); } }
+
+  .page-title-bar{
+    display:none;
+    font-weight:600;
+    font-size:16pt;
+    text-align:center;
+    color:var(--ink-900);
+    border-bottom:1px solid #e2ddd0;
+    padding:16px 16px 10px;
+    font-family:'SolaimanLipi','Times New Roman',Times,serif;
+  }
+  .page-title-bar.on{ display:block; }
+  @media(min-width:880px){ .page-title-bar{ padding:var(--m-top) var(--m-right) 10px var(--m-left); } }
+
+  .watermark{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    pointer-events:none; z-index:0;
+    overflow:hidden;
+  }
+  .watermark span{
+    display:block; max-width:92%;
+    color:#000;
+    white-space:nowrap;
+    user-select:none;
+    text-align:center;
+  }
+  .watermark img{
+    max-width:60%; max-height:60%; object-fit:contain;
+  }
+
+  .page-content{
+    position:relative; z-index:1;
+    flex:1;
+    padding:16px;
+    outline:none;
+    font-size:12pt;
+    line-height:1.7;
+    color:var(--text-body);
+    font-family:'SolaimanLipi','Times New Roman',Times,serif;
+    word-wrap:break-word;
+  }
+  .page-content.has-title{ padding-top:12px; }
+  @media(min-width:880px){
+    .page-content{ padding:var(--m-top) var(--m-right) var(--m-bottom) var(--m-left); }
+    .page-content.has-title{ padding-top:8mm; }
+  }
+  .page-content:empty:before{
+    content: attr(data-placeholder);
+    color:#b7b0a0;
+  }
+  .page-content p{ margin:0 0 10px; }
+  .page-content blockquote{
+    margin:10px 0; padding:6px 14px; border-left:3px solid var(--seal);
+    color:#4c473e; font-style:italic;
+  }
+  .page-content a{ color:#7e2f21; }
+
+  .page-footer{
+    position:relative; z-index:1;
+    display:none;
+    text-align:center; font-size:10pt; color:#5c574a;
+    padding:6px 0 16px;
+    font-family:'SolaimanLipi','Times New Roman',Times,serif;
+  }
+  .page-footer.on{ display:block; }
+  @media(min-width:880px){ .page-footer{ padding-bottom:var(--m-bottom); } }
+
+  .add-page-btn{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    width:100%; max-width:var(--page-w); margin:0 auto;
+    padding:14px; border:2px dashed #b9b19c; border-radius:var(--radius-md);
+    background:transparent; color:var(--muted); cursor:pointer; font-size:13.5px;
+  }
+  .add-page-btn:hover{ border-color:var(--seal); color:var(--seal); }
+
+  /* ---------- Toast ---------- */
+  #toastEl{
+    position:fixed; left:50%; bottom:22px; transform:translate(-50%,16px);
+    background:var(--ink-900); color:#f2efe6; padding:10px 18px; border-radius:8px;
+    font-size:13px; opacity:0; pointer-events:none; transition:.25s ease; z-index:90;
+    box-shadow:0 6px 20px rgba(0,0,0,.3); max-width:90vw; text-align:center;
+  }
+  #toastEl.show{ opacity:1; transform:translate(-50%,0); }
+
+  /* ---------- Settings drawer ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(20,18,14,.35);
+    opacity:0; pointer-events:none; transition:opacity .2s ease; z-index:49;
+  }
+  .overlay.show{ opacity:1; pointer-events:auto; }
+
+  .drawer{
+    position:fixed; top:0; right:0; height:100%;
+    width:340px; max-width:88vw;
+    background:var(--panel);
+    border-left:1px solid var(--line);
+    z-index:50;
+    transform:translateX(100%);
+    transition:transform .25s ease;
+    overflow-y:auto;
+    padding-bottom:40px;
+  }
+  .drawer.show{ transform:translateX(0); }
+
+  .drawer-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 18px; border-bottom:1px solid var(--line);
+    background:var(--ink-900); color:#f2efe6; position:sticky; top:0;
+  }
+  .drawer-head h2{ font-size:15px; margin:0; font-weight:600; }
+  .drawer-head button{ background:none;border:none;color:#f2efe6;font-size:20px;cursor:pointer;line-height:1; padding:4px; }
+
+  .dsection{ padding:16px 18px; border-bottom:1px solid var(--line-soft); }
+  .dsection h3{
+    font-size:11.5px; text-transform:uppercase; letter-spacing:.6px;
+    color:var(--seal); margin:0 0 12px; font-weight:700;
+  }
+  .field{ margin-bottom:12px; }
+  .field:last-child{ margin-bottom:0; }
+  .field label{ display:block; font-size:12.5px; color:var(--ink-900); margin-bottom:5px; font-weight:500; }
+  .field input[type=text], .field input[type=number], .field textarea, .field select{
+    width:100%; border:1px solid var(--line); border-radius:var(--radius-sm);
+    padding:9px; font-size:13px; background:#fff; color:var(--text-body);
+  }
+  .row2{ display:flex; gap:10px; }
+  .row2 > *{ flex:1; }
+  .row4{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .switch-row{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:10px; }
+  .switch-row label{ font-size:13px; font-weight:500; color:var(--ink-900); cursor:pointer; }
+  .switch{ position:relative; width:42px; height:24px; flex-shrink:0; display:inline-block; cursor:pointer; }
+  .switch input{ opacity:0; width:100%; height:100%; margin:0; position:absolute; cursor:pointer; }
+  .slider{
+    position:absolute; inset:0; background:#c9c2ae; border-radius:20px; transition:.2s; pointer-events:none;
+  }
+  .slider:before{
+    content:""; position:absolute; width:18px; height:18px; left:3px; top:3px;
+    background:#fff; border-radius:50%; transition:.2s;
+  }
+  .switch input:checked + .slider{ background:var(--seal); }
+  .switch input:checked + .slider:before{ transform:translateX(18px); }
+
+  .seg{ display:flex; border:1px solid var(--line); border-radius:var(--radius-sm); overflow:hidden; }
+  .seg button{
+    flex:1; border:none; background:#fff; padding:8px 4px; font-size:12px; cursor:pointer; color:var(--ink-900);
+    border-right:1px solid var(--line);
+  }
+  .seg button:last-child{ border-right:none; }
+  .seg button.on{ background:var(--ink-900); color:#f2efe6; }
+
+  .range-row{ display:flex; align-items:center; gap:10px; }
+  .range-row input[type=range]{ flex:1; }
+  .range-row output{ font-size:12px; color:var(--muted); width:38px; text-align:right; }
+
+  .imgpick{
+    border:1.5px dashed var(--line); border-radius:var(--radius-sm);
+    text-align:center; padding:14px 8px; font-size:12px; color:var(--muted);
+    cursor:pointer; background:#fff;
+  }
+  .imgpick:hover{ border-color:var(--seal); color:var(--seal); }
+  .wm-preview-name{ font-size:11.5px; color:var(--muted); margin-top:6px; word-break:break-all; }
+
+  .save-status{ font-size:11px; color:var(--muted); padding:14px 18px 0; }
+  .save-status b{ color:var(--seal); }
+
+  .hint{ font-size:11.5px; color:var(--muted); margin:0; line-height:1.5; }
+
+  /* ---------- Print ---------- */
+  @media print{
+    header.topbar, .ribbon, .drawer, .overlay, .page-frame-label, .add-page-btn, .save-status, #toastEl{ display:none !important; }
+    html, body{ background:#fff !important; overflow:visible !important; }
+    .workspace{ padding:0 !important; display:block !important; }
+    #pages{ gap:0 !important; display:block !important; max-width:none !important; width:auto !important; }
+    .page-shell{ break-after:page; page-break-after:always; width:auto !important; }
+    .page-shell:last-child{ break-after:auto; page-break-after:auto; }
+    .page{ box-shadow:none !important; width:var(--page-w) !important; min-height:var(--page-h) !important; }
+    .page-content{ padding:var(--m-top) var(--m-right) var(--m-bottom) var(--m-left) !important; }
+    .page-content.has-title{ padding-top:8mm !important; }
+    .page-title-bar{ padding:var(--m-top) var(--m-right) 10px var(--m-left) !important; }
+    .page-footer{ padding-bottom:var(--m-bottom) !important; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">কাগজ<span>.</span></div>
+      <div class="sub">A4 পেজ পিডিএফ লেখক ও তৈরির টুল</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost" id="settingsBtn" title="ডকুমেন্ট সেটিংস">⚙ <span class="lbl">সেটিংস</span></button>
+      <button class="btn btn-ghost" id="printBtn" title="প্রিন্ট করুন">🖨 <span class="lbl">প্রিন্ট</span></button>
+      <button class="btn btn-seal" id="downloadBtn" title="পিডিএফ ডাউনলোড করুন">⬇ <span class="lbl">PDF ডাউনলোড</span></button>
+    </div>
+  </header>
+
+  <div class="ribbon" id="ribbon">
+    <div class="rgroup">
+      <select class="rsel" id="blockSel" title="স্টাইল">
+        <option value="P">প্যারাগ্রাফ</option>
+        <option value="H1">শিরোনাম ১</option>
+        <option value="H2">শিরোনাম ২</option>
+        <option value="H3">শিরোনাম ৩</option>
+        <option value="BLOCKQUOTE">উদ্ধৃতি</option>
+      </select>
+    </div>
+    <div class="rgroup">
+      <select class="rsel" id="fontSel" title="ফন্ট (আগে টেক্সট সিলেক্ট করুন)">
+        <option value="'SolaimanLipi','Times New Roman',serif" selected>ডিফল্ট (স্বয়ংক্রিয়)</option>
+        <option value="'SolaimanLipi',serif">SolaimanLipi</option>
+        <option value="'Times New Roman',serif">Times New Roman</option>
+        <option value="Arial,sans-serif">Arial</option>
+        <option value="'Courier New',monospace">Courier New</option>
+        <option value="Georgia,serif">Georgia</option>
+      </select>
+      <select class="rsel" id="sizeSel" title="ফন্ট সাইজ (আগে টেক্সট সিলেক্ট করুন)">
+        <option value="10">10pt</option>
+        <option value="11">11pt</option>
+        <option value="12" selected>12pt</option>
+        <option value="14">14pt</option>
+        <option value="16">16pt</option>
+        <option value="18">18pt</option>
+        <option value="24">24pt</option>
+        <option value="32">32pt</option>
+      </select>
+    </div>
+    <div class="rgroup">
+      <button class="ricon rlangbtn" data-lang="bn" title="নির্বাচিত অংশ বাংলা ফন্টে দেখান">বাং</button>
+      <button class="ricon rlangbtn" data-lang="en" title="Show selection in English font">EN</button>
+    </div>
+    <div class="rgroup">
+      <button class="ricon" data-cmd="bold" title="Bold"><b>B</b></button>
+      <button class="ricon" data-cmd="italic" title="Italic"><i>I</i></button>
+      <button class="ricon" data-cmd="underline" title="Underline"><u>U</u></button>
+      <button class="ricon" data-cmd="strikeThrough" title="Strikethrough"><s>S</s></button>
+    </div>
+    <div class="rgroup">
+      <input class="rcolor" type="color" id="foreColor" value="#262421" title="লেখার রঙ (আগে টেক্সট সিলেক্ট করুন)">
+      <input class="rcolor" type="color" id="backColor" value="#fff6a3" title="হাইলাইট রঙ (আগে টেক্সট সিলেক্ট করুন)">
+    </div>
+    <div class="rgroup">
+      <button class="ricon" data-cmd="justifyLeft" title="বামে">⟸</button>
+      <button class="ricon" data-cmd="justifyCenter" title="মাঝে">≡</button>
+      <button class="ricon" data-cmd="justifyRight" title="ডানে">⟹</button>
+      <button class="ricon" data-cmd="justifyFull" title="জাস্টিফাই">▤</button>
+    </div>
+    <div class="rgroup">
+      <button class="ricon" data-cmd="insertUnorderedList" title="বুলেট লিস্ট">•≡</button>
+      <button class="ricon" data-cmd="insertOrderedList" title="নাম্বার লিস্ট">1≡</button>
+      <button class="ricon" data-cmd="outdent" title="Outdent">⇤</button>
+      <button class="ricon" data-cmd="indent" title="Indent">⇥</button>
+    </div>
+    <div class="rgroup">
+      <button class="ricon" data-cmd="superscript" title="Superscript">x²</button>
+      <button class="ricon" data-cmd="subscript" title="Subscript">x₂</button>
+      <button class="ricon" id="linkBtn" title="লিঙ্ক যোগ করুন">🔗</button>
+      <button class="ricon" id="hrBtn" title="Horizontal line">―</button>
+      <button class="ricon" id="clearFmtBtn" title="ফরম্যাট মুছুন">Tx</button>
+    </div>
+    <div class="rgroup">
+      <button class="ricon" data-cmd="undo" title="Undo">↺</button>
+      <button class="ricon" data-cmd="redo" title="Redo">↻</button>
+    </div>
+  </div>
+
+  <main class="workspace">
+    <div id="pages"></div>
+  </main>
+
+</div>
+
+<div id="toastEl"></div>
+<div class="overlay" id="overlay"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <h2>ডকুমেন্ট সেটিংস</h2>
+    <button id="closeDrawer">✕</button>
+  </div>
+
+  <div class="dsection">
+    <h3>পেজ সেটআপ</h3>
+    <div class="field">
+      <label>অভিমুখ (Orientation)</label>
+      <div class="seg" id="orientSeg">
+        <button data-o="portrait" class="on">পোর্ট্রেট</button>
+        <button data-o="landscape">ল্যান্ডস্কেপ</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>মার্জিন</label>
+      <div class="seg" id="marginSeg">
+        <button data-m="narrow">সরু · ১০মিমি</button>
+        <button data-m="normal" class="on">স্বাভাবিক · ২০মিমি</button>
+        <button data-m="wide">চওড়া · ৩০মিমি</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dsection">
+    <h3>পেজ শিরোনাম</h3>
+    <div class="switch-row">
+      <label for="titleToggle">সব পেজে শিরোনাম দেখান</label>
+      <label class="switch"><input type="checkbox" id="titleToggle"><span class="slider"></span></label>
+    </div>
+    <div class="field">
+      <label for="titleText">শিরোনাম টেক্সট</label>
+      <input type="text" id="titleText" placeholder="যেমনঃ প্রকল্প প্রস্তাবনা">
+    </div>
+  </div>
+
+  <div class="dsection">
+    <h3>পেজ নাম্বার</h3>
+    <div class="switch-row">
+      <label for="pageNumToggle">পেজ নাম্বার দেখান</label>
+      <label class="switch"><input type="checkbox" id="pageNumToggle" checked><span class="slider"></span></label>
+    </div>
+    <div class="field">
+      <label>ফরম্যাট</label>
+      <div class="seg" id="pnFormatSeg">
+        <button data-fmt="num" class="on">১, ২, ৩</button>
+        <button data-fmt="of">১ / মোট</button>
+        <button data-fmt="page">Page ১</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dsection">
+    <h3>ওয়াটারমার্ক</h3>
+    <div class="switch-row">
+      <label for="wmToggle">ওয়াটারমার্ক চালু করুন</label>
+      <label class="switch"><input type="checkbox" id="wmToggle"><span class="slider"></span></label>
+    </div>
+    <div class="field">
+      <label>ধরন</label>
+      <div class="seg" id="wmTypeSeg">
+        <button data-type="text" class="on">টেক্সট</button>
+        <button data-type="image">ছবি</button>
+      </div>
+    </div>
+    <div class="field" id="wmTextField">
+      <label for="wmText">ওয়াটারমার্ক টেক্সট</label>
+      <input type="text" id="wmText" placeholder="যেমনঃ DRAFT / গোপনীয়" value="DRAFT">
+    </div>
+    <div class="field" id="wmImageField" style="display:none;">
+      <label>ওয়াটারমার্ক ছবি</label>
+      <div class="imgpick" id="wmImagePick">ছবি বাছাই করতে ক্লিক করুন</div>
+      <input type="file" id="wmImageInput" accept="image/*" style="display:none;">
+      <div class="wm-preview-name" id="wmImageName"></div>
+    </div>
+    <div class="field">
+      <label>স্বচ্ছতা (Opacity)</label>
+      <div class="range-row">
+        <input type="range" id="wmOpacity" min="2" max="40" value="10">
+        <output id="wmOpacityOut">10%</output>
+      </div>
+    </div>
+    <div class="field">
+      <label>আকার / সাইজ</label>
+      <div class="range-row">
+        <input type="range" id="wmSize" min="14" max="90" value="40">
+        <output id="wmSizeOut">40</output>
+      </div>
+    </div>
+    <div class="field">
+      <label>রোটেশন</label>
+      <div class="range-row">
+        <input type="range" id="wmRotate" min="-90" max="90" value="-35">
+        <output id="wmRotateOut">-35°</output>
+      </div>
+    </div>
+  </div>
+
+  <div class="dsection">
+    <h3>ভাষা ও ফন্ট</h3>
+    <p class="hint">
+      বাংলা লেখা স্বয়ংক্রিয়ভাবে <b>SolaimanLipi</b> এবং ইংরেজি লেখা <b>Times New Roman</b> ফন্টে দেখানো হয়। ফন্ট/সাইজ/রঙ পরিবর্তন করতে, টুলবার থেকে বাছাই করার আগে পেজের মধ্যে টেক্সট সিলেক্ট (হাইলাইট) করে নিন।
+    </p>
+  </div>
+
+  <div class="dsection">
+    <h3>প্রিন্ট / পিডিএফ</h3>
+    <p class="hint">
+      "PDF ডাউনলোড" চাপলে প্রিন্ট ডায়ালগ খুলবে — সেখানে Destination/Printer হিসেবে <b>Save as PDF</b> বাছুন। এতে বাংলা লেখা ও A4 সাইজ নিখুঁত থাকে (Google Docs-এর মতোই)।
+    </p>
+  </div>
+
+  <div class="dsection">
+    <h3>ডকুমেন্ট</h3>
+    <button class="btn btn-ghost" id="newDocBtn" style="width:100%;justify-content:center;color:#9c3b2a;border-color:#9c3b2a;">🗑 নতুন ডকুমেন্ট (সব মুছুন)</button>
+  </div>
+
+  <div class="save-status" id="saveStatus">সংরক্ষণের অবস্থা দেখানো হবে এখানে</div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const STORAGE_KEY = "a4pdf_document_v2";
+  const pagesEl = document.getElementById('pages');
+
+  let state = {
+    pagesHTML: [""],
+    title: { on:false, text:"" },
+    pageNum: { on:true, format:"num" },
+    watermark: { on:false, type:"text", text:"DRAFT", image:"", opacity:10, size:40, rotate:-35 },
+    pageSetup: { orientation:"portrait", margin:"normal" }
+  };
+
+  const MARGIN_MM = { narrow:10, normal:20, wide:30 };
+
+  // ---------- Toast ----------
+  let toastTimer = null;
+  function toast(msg, ms){
+    const t = document.getElementById('toastEl');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), ms || 2400);
+  }
+
+  // ---------- Bangla digits ----------
+  function bnDigits(n){
+    const map = ["০","১","২","৩","৪","৫","৬","৭","৮","৯"];
+    return String(n).split("").map(d => /[0-9]/.test(d) ? map[+d] : d).join("");
+  }
+
+  function footerText(idx, total){
+    const cur = bnDigits(idx+1), tot = bnDigits(total);
+    if(state.pageNum.format === "of") return cur + " / " + tot;
+    if(state.pageNum.format === "page") return "Page " + cur;
+    return cur;
+  }
+
+  function escapeHTML(s){
+    const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
+  }
+
+  function watermarkInnerHTML(){
+    if(!state.watermark.on) return "";
+    if(state.watermark.type === "image" && state.watermark.image){
+      return `<img src="${state.watermark.image}" style="opacity:${state.watermark.opacity/100}; transform:rotate(${state.watermark.rotate}deg);">`;
+    }
+    const text = (state.watermark.text || "").trim() || "DRAFT";
+    return `<span style="font-size:${state.watermark.size}px; opacity:${state.watermark.opacity/100}; transform:rotate(${state.watermark.rotate}deg); font-family:'Space Grotesk',sans-serif; font-weight:700; letter-spacing:2px;">${escapeHTML(text)}</span>`;
+  }
+
+  // ---------- Page setup (orientation / margins) applied via CSS variables + dynamic @page ----------
+  function applyPageSetupCSS(){
+    const portrait = state.pageSetup.orientation === "portrait";
+    const w = portrait ? 210 : 297;
+    const h = portrait ? 297 : 210;
+    const m = MARGIN_MM[state.pageSetup.margin] || 20;
+    const root = document.documentElement.style;
+    root.setProperty('--page-w', w + 'mm');
+    root.setProperty('--page-h', h + 'mm');
+    root.setProperty('--m-top', m + 'mm');
+    root.setProperty('--m-right', m + 'mm');
+    root.setProperty('--m-bottom', m + 'mm');
+    root.setProperty('--m-left', m + 'mm');
+
+    let styleTag = document.getElementById('dynPageCSS');
+    if(!styleTag){
+      styleTag = document.createElement('style');
+      styleTag.id = 'dynPageCSS';
+      document.head.appendChild(styleTag);
+    }
+    styleTag.textContent = `@page{ size:${w}mm ${h}mm; margin:0; }`;
+  }
+
+  // ---------- Build / render pages ----------
+  function renderPages(){
+    pagesEl.innerHTML = "";
+    const total = state.pagesHTML.length;
+    state.pagesHTML.forEach((html, idx) => {
+      const shell = document.createElement('div');
+      shell.className = 'page-shell';
+
+      const labelRow = document.createElement('div');
+      labelRow.className = 'page-frame-label';
+      labelRow.innerHTML = `<span>পেজ ${bnDigits(idx+1)} / ${bnDigits(total)}</span>` +
+        (total > 1 ? `<button class="del-page" data-idx="${idx}">এই পেজ মুছুন</button>` : `<span></span>`);
+      shell.appendChild(labelRow);
+
+      const page = document.createElement('div');
+      page.className = 'page';
+      page.dataset.idx = idx;
+
+      const wm = document.createElement('div');
+      wm.className = 'watermark';
+      wm.innerHTML = watermarkInnerHTML();
+      page.appendChild(wm);
+
+      const titleBar = document.createElement('div');
+      titleBar.className = 'page-title-bar' + (state.title.on ? ' on' : '');
+      titleBar.textContent = state.title.text || "";
+      page.appendChild(titleBar);
+
+      const content = document.createElement('div');
+      content.className = 'page-content' + (state.title.on ? ' has-title' : '');
+      content.contentEditable = "true";
+      content.setAttribute('data-placeholder', idx === 0 ? 'এখানে লিখুন বা পেস্ট করুন…' : '');
+      content.innerHTML = html;
+      content.addEventListener('input', () => {
+        state.pagesHTML[idx] = content.innerHTML;
+        scheduleSave();
+      });
+      content.addEventListener('paste', handlePaste);
+      page.appendChild(content);
+
+      const footer = document.createElement('div');
+      footer.className = 'page-footer' + (state.pageNum.on ? ' on' : '');
+      footer.textContent = footerText(idx, total);
+      page.appendChild(footer);
+
+      shell.appendChild(page);
+      pagesEl.appendChild(shell);
+    });
+
+    pagesEl.querySelectorAll('.del-page').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const i = +btn.dataset.idx;
+        if(state.pagesHTML.length <= 1) return;
+        if(!confirm('এই পেজটি মুছে ফেলতে চান?')) return;
+        state.pagesHTML.splice(i,1);
+        renderPages();
+        scheduleSave();
+      });
+    });
+  }
+
+  function handlePaste(e){
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    document.execCommand('insertText', false, text);
+  }
+
+  // Update watermark / title / footer without rebuilding editable content (avoids cursor loss while typing)
+  function updateChromeOnly(){
+    const total = state.pagesHTML.length;
+    document.querySelectorAll('.page').forEach((page, idx) => {
+      const wm = page.querySelector('.watermark');
+      wm.innerHTML = watermarkInnerHTML();
+
+      const tb = page.querySelector('.page-title-bar');
+      tb.className = 'page-title-bar' + (state.title.on ? ' on' : '');
+      tb.textContent = state.title.text || "";
+
+      const ct = page.querySelector('.page-content');
+      ct.classList.toggle('has-title', state.title.on);
+
+      const ft = page.querySelector('.page-footer');
+      ft.className = 'page-footer' + (state.pageNum.on ? ' on' : '');
+      ft.textContent = footerText(idx, total);
+    });
+  }
+
+  function addPage(){
+    state.pagesHTML.push("");
+    renderPages();
+    scheduleSave();
+    setTimeout(() => {
+      const all = pagesEl.querySelectorAll('.page-content');
+      const last = all[all.length-1];
+      last.focus();
+      last.closest('.page-shell').scrollIntoView({behavior:'smooth', block:'center'});
+    }, 50);
+  }
+
+  function ensureAddPageButton(){
+    if(document.getElementById('addPageBtn')) return;
+    const btn = document.createElement('button');
+    btn.id = 'addPageBtn';
+    btn.className = 'add-page-btn';
+    btn.innerHTML = '+ &nbsp;নতুন পেজ যোগ করুন';
+    btn.addEventListener('click', addPage);
+    document.querySelector('.workspace').appendChild(btn);
+  }
+
+  // ---------- Selection tracking (fixes toolbar losing the highlighted text) ----------
+  let savedRange = null;
+
+  document.addEventListener('selectionchange', () => {
+    const sel = window.getSelection();
+    if(!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+    const anchor = sel.anchorNode;
+    if(!anchor) return;
+    const el = anchor.nodeType === 1 ? anchor : anchor.parentElement;
+    if(el && el.closest('.page-content')){
+      savedRange = sel.getRangeAt(0).cloneRange();
+    }
+  });
+
+  function restoreSavedSelection(){
+    if(!savedRange) return null;
+    const container = savedRange.startContainer;
+    const startEl = container.nodeType === 1 ? container : container.parentElement;
+    const editable = startEl ? startEl.closest('.page-content') : null;
+    if(!editable) return null;
+    editable.focus({ preventScroll:true });
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    try{ sel.addRange(savedRange); } catch(e){ return null; }
+    return editable;
+  }
+
+  function persistEditable(editable){
+    if(!editable) return;
+    const idx = +editable.closest('.page').dataset.idx;
+    state.pagesHTML[idx] = editable.innerHTML;
+    scheduleSave();
+  }
+
+  // Toolbar clicks on icon buttons must not steal focus away from the page (keeps selection alive)
+  document.getElementById('ribbon').addEventListener('mousedown', (e) => {
+    if(e.target.closest('.rsel') || e.target.closest('input[type=color]')) return;
+    e.preventDefault();
+  });
+
+  document.querySelectorAll('[data-cmd]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.execCommand(btn.dataset.cmd, false, null);
+      const active = document.activeElement && document.activeElement.closest('.page-content');
+      if(active) persistEditable(active);
+    });
+  });
+
+  document.getElementById('blockSel').addEventListener('change', function(){
+    const editable = restoreSavedSelection() || document.activeElement.closest?.('.page-content');
+    document.execCommand('formatBlock', false, this.value);
+    if(editable) persistEditable(editable);
+  });
+
+  document.getElementById('fontSel').addEventListener('change', function(){
+    const editable = restoreSavedSelection();
+    if(!editable){ toast('ফন্ট বসাতে আগে পেজের মধ্যে কিছু টেক্সট সিলেক্ট করুন'); return; }
+    document.execCommand('styleWithCSS', false, true);
+    document.execCommand('fontName', false, this.value);
+    persistEditable(editable);
+  });
+
+  document.getElementById('sizeSel').addEventListener('change', function(){
+    const editable = restoreSavedSelection();
+    if(!editable){ toast('সাইজ বসাতে আগে পেজের মধ্যে কিছু টেক্সট সিলেক্ট করুন'); return; }
+    document.execCommand('styleWithCSS', false, true);
+    document.execCommand('fontSize', false, '7');
+    editable.querySelectorAll('font[size="7"]').forEach(f => {
+      f.removeAttribute('size');
+      f.style.fontSize = this.value + 'pt';
+    });
+    persistEditable(editable);
+  });
+
+  document.getElementById('foreColor').addEventListener('input', function(){
+    const editable = restoreSavedSelection();
+    if(!editable){ toast('রঙ বসাতে আগে টেক্সট সিলেক্ট করুন'); return; }
+    document.execCommand('styleWithCSS', false, true);
+    document.execCommand('foreColor', false, this.value);
+    persistEditable(editable);
+  });
+
+  document.getElementById('backColor').addEventListener('input', function(){
+    const editable = restoreSavedSelection();
+    if(!editable){ toast('হাইলাইট করতে আগে টেক্সট সিলেক্ট করুন'); return; }
+    document.execCommand('styleWithCSS', false, true);
+    try{ document.execCommand('hiliteColor', false, this.value); }
+    catch(e){ document.execCommand('backColor', false, this.value); }
+    persistEditable(editable);
+  });
+
+  document.querySelectorAll('.rlangbtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const editable = restoreSavedSelection();
+      if(!editable){ toast('আগে কিছু টেক্সট সিলেক্ট করুন'); return; }
+      const fam = btn.dataset.lang === 'bn' ? "'SolaimanLipi',serif" : "'Times New Roman',Times,serif";
+      document.execCommand('styleWithCSS', false, true);
+      document.execCommand('fontName', false, fam);
+      persistEditable(editable);
+    });
+  });
+
+  document.getElementById('linkBtn').addEventListener('click', () => {
+    const url = prompt('লিঙ্ক (URL) লিখুন:', 'https://');
+    if(url){
+      document.execCommand('createLink', false, url);
+      const active = document.activeElement && document.activeElement.closest('.page-content');
+      if(active) persistEditable(active);
+    }
+  });
+  document.getElementById('hrBtn').addEventListener('click', () => {
+    document.execCommand('insertHorizontalRule', false, null);
+  });
+  document.getElementById('clearFmtBtn').addEventListener('click', () => {
+    document.execCommand('removeFormat', false, null);
+  });
+
+  // ---------- Drawer ----------
+  const drawer = document.getElementById('drawer');
+  const overlay = document.getElementById('overlay');
+  function openDrawer(){ drawer.classList.add('show'); overlay.classList.add('show'); }
+  function closeDrawer(){ drawer.classList.remove('show'); overlay.classList.remove('show'); }
+  document.getElementById('settingsBtn').addEventListener('click', openDrawer);
+  document.getElementById('closeDrawer').addEventListener('click', closeDrawer);
+  overlay.addEventListener('click', closeDrawer);
+
+  // Page setup
+  document.querySelectorAll('#orientSeg button').forEach(b => {
+    b.addEventListener('click', function(){
+      document.querySelectorAll('#orientSeg button').forEach(x => x.classList.remove('on'));
+      this.classList.add('on');
+      state.pageSetup.orientation = this.dataset.o;
+      applyPageSetupCSS(); scheduleSave();
+    });
+  });
+  document.querySelectorAll('#marginSeg button').forEach(b => {
+    b.addEventListener('click', function(){
+      document.querySelectorAll('#marginSeg button').forEach(x => x.classList.remove('on'));
+      this.classList.add('on');
+      state.pageSetup.margin = this.dataset.m;
+      applyPageSetupCSS(); scheduleSave();
+    });
+  });
+
+  // Title
+  document.getElementById('titleToggle').addEventListener('change', function(){
+    state.title.on = this.checked; updateChromeOnly(); scheduleSave();
+  });
+  document.getElementById('titleText').addEventListener('input', function(){
+    state.title.text = this.value; updateChromeOnly(); scheduleSave();
+  });
+
+  // Page numbers
+  document.getElementById('pageNumToggle').addEventListener('change', function(){
+    state.pageNum.on = this.checked; updateChromeOnly(); scheduleSave();
+  });
+  document.querySelectorAll('#pnFormatSeg button').forEach(b => {
+    b.addEventListener('click', function(){
+      document.querySelectorAll('#pnFormatSeg button').forEach(x => x.classList.remove('on'));
+      this.classList.add('on');
+      state.pageNum.format = this.dataset.fmt;
+      updateChromeOnly(); scheduleSave();
+    });
+  });
+
+  // Watermark
+  document.getElementById('wmToggle').addEventListener('change', function(){
+    state.watermark.on = this.checked; updateChromeOnly(); scheduleSave();
+  });
+  document.querySelectorAll('#wmTypeSeg button').forEach(b => {
+    b.addEventListener('click', function(){
+      document.querySelectorAll('#wmTypeSeg button').forEach(x => x.classList.remove('on'));
+      this.classList.add('on');
+      state.watermark.type = this.dataset.type;
+      document.getElementById('wmTextField').style.display = this.dataset.type === 'text' ? '' : 'none';
+      document.getElementById('wmImageField').style.display = this.dataset.type === 'image' ? '' : 'none';
+      updateChromeOnly(); scheduleSave();
+    });
+  });
+  document.getElementById('wmText').addEventListener('input', function(){
+    state.watermark.text = this.value; updateChromeOnly(); scheduleSave();
+  });
+  document.getElementById('wmImagePick').addEventListener('click', () => document.getElementById('wmImageInput').click());
+  document.getElementById('wmImageInput').addEventListener('change', function(){
+    const file = this.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e){
+      state.watermark.image = e.target.result;
+      document.getElementById('wmImageName').textContent = file.name;
+      updateChromeOnly(); scheduleSave();
+    };
+    reader.readAsDataURL(file);
+  });
+  function bindRange(id, outId, key, suffix){
+    const el = document.getElementById(id), out = document.getElementById(outId);
+    el.addEventListener('input', function(){
+      state.watermark[key] = +this.value;
+      out.textContent = this.value + (suffix || '');
+      updateChromeOnly(); scheduleSave();
+    });
+  }
+  bindRange('wmOpacity','wmOpacityOut','opacity','%');
+  bindRange('wmSize','wmSizeOut','size','');
+  bindRange('wmRotate','wmRotateOut','rotate','°');
+
+  // New document
+  document.getElementById('newDocBtn').addEventListener('click', () => {
+    if(!confirm('পুরো ডকুমেন্ট মুছে নতুন করে শুরু করতে চান? এই কাজটি ফিরিয়ে আনা যাবে না।')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    state = {
+      pagesHTML: [""],
+      title: { on:false, text:"" },
+      pageNum: { on:true, format:"num" },
+      watermark: { on:false, type:"text", text:"DRAFT", image:"", opacity:10, size:40, rotate:-35 },
+      pageSetup: { orientation:"portrait", margin:"normal" }
+    };
+    syncDrawerFromState();
+    applyPageSetupCSS();
+    renderPages();
+    closeDrawer();
+  });
+
+  function syncDrawerFromState(){
+    document.getElementById('titleToggle').checked = state.title.on;
+    document.getElementById('titleText').value = state.title.text;
+    document.getElementById('pageNumToggle').checked = state.pageNum.on;
+    document.querySelectorAll('#pnFormatSeg button').forEach(b => b.classList.toggle('on', b.dataset.fmt === state.pageNum.format));
+    document.getElementById('wmToggle').checked = state.watermark.on;
+    document.querySelectorAll('#wmTypeSeg button').forEach(b => b.classList.toggle('on', b.dataset.type === state.watermark.type));
+    document.getElementById('wmTextField').style.display = state.watermark.type === 'text' ? '' : 'none';
+    document.getElementById('wmImageField').style.display = state.watermark.type === 'image' ? '' : 'none';
+    document.getElementById('wmText').value = state.watermark.text;
+    document.getElementById('wmOpacity').value = state.watermark.opacity;
+    document.getElementById('wmOpacityOut').textContent = state.watermark.opacity + '%';
+    document.getElementById('wmSize').value = state.watermark.size;
+    document.getElementById('wmSizeOut').textContent = state.watermark.size;
+    document.getElementById('wmRotate').value = state.watermark.rotate;
+    document.getElementById('wmRotateOut').textContent = state.watermark.rotate + '°';
+    document.getElementById('wmImageName').textContent = state.watermark.image ? 'ছবি নির্বাচিত ✓' : '';
+    document.querySelectorAll('#orientSeg button').forEach(b => b.classList.toggle('on', b.dataset.o === state.pageSetup.orientation));
+    document.querySelectorAll('#marginSeg button').forEach(b => b.classList.toggle('on', b.dataset.m === state.pageSetup.margin));
+  }
+
+  // ---------- Autosave ----------
+  let saveTimer = null;
+  function scheduleSave(){
+    clearTimeout(saveTimer);
+    document.getElementById('saveStatus').innerHTML = 'সংরক্ষণ হচ্ছে…';
+    saveTimer = setTimeout(() => {
+      try{
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        const t = new Date();
+        document.getElementById('saveStatus').innerHTML = '<b>✓ সংরক্ষিত হয়েছে</b> — ' + t.toLocaleTimeString('bn-BD');
+      }catch(err){
+        document.getElementById('saveStatus').textContent = 'সংরক্ষণ ব্যর্থ হয়েছে (ব্রাউজার স্টোরেজ পূর্ণ হতে পারে)।';
+      }
+    }, 400);
+  }
+
+  function loadSaved(){
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return;
+    try{
+      const parsed = JSON.parse(raw);
+      state = Object.assign(state, parsed);
+      if(!Array.isArray(state.pagesHTML) || state.pagesHTML.length === 0) state.pagesHTML = [""];
+      if(!state.pageSetup) state.pageSetup = { orientation:"portrait", margin:"normal" };
+    }catch(err){ /* ignore corrupt save */ }
+  }
+
+  // ---------- Print / Download (native browser print → perfect Bangla text & exact A4 size) ----------
+  document.getElementById('printBtn').addEventListener('click', () => window.print());
+  document.getElementById('downloadBtn').addEventListener('click', () => {
+    toast("প্রিন্ট উইন্ডোতে Destination হিসেবে 'Save as PDF' বাছুন", 4000);
+    setTimeout(() => window.print(), 350);
+  });
+
+  // ---------- Init ----------
+  loadSaved();
+  syncDrawerFromState();
+  applyPageSetupCSS();
+  renderPages();
+  ensureAddPageButton();
+})();
+</script>
+</body>
+</html>
