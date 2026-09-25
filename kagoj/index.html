@@ -10,9 +10,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600&display=swap" rel="stylesheet">
 
 <!-- SolaimanLipi web font for Bangla document content -->
-<link href="https://fonts.maateen.me/solaiman-lipi/font.css" rel="stylesheet">
-<link href="https://fonts.cdnfonts.com/css/times-new-roman" rel="stylesheet">
-                
+<link rel="stylesheet" href="https://webfonts.maateen.me/solaiman-lipi/font.css">
+
 <style>
   :root{
     --ink-900:#1c2128;
@@ -29,7 +28,7 @@
     --radius-sm:4px;
     --radius-md:8px;
 
-    /* page setup (updated by JS) */
+    /* page setup (updated by JS) — used for print output & real-size padding */
     --page-w:210mm;
     --page-h:297mm;
     --m-top:20mm;
@@ -52,14 +51,21 @@
   /* ---------- Layout shell ---------- */
   #app{ display:flex; flex-direction:column; min-height:100vh; }
 
+  /* Header + toolbar are wrapped together and made sticky as ONE unit,
+     so their positions can never drift apart or get hidden on scroll. */
+  .app-chrome{
+    position:sticky; top:0; z-index:41;
+    display:flex; flex-direction:column;
+  }
+
   header.topbar{
     background:var(--ink-900);
     color:#f2efe6;
     display:flex; align-items:center; justify-content:space-between;
     padding:10px 14px;
     gap:8px;
-    position:sticky; top:0; z-index:40;
     border-bottom:3px solid var(--seal);
+    flex-shrink:0;
   }
   .brand{ display:flex; align-items:baseline; gap:8px; min-width:0; }
   .brand .mark{ font-weight:700; font-size:17px; letter-spacing:.2px; flex-shrink:0; }
@@ -91,18 +97,18 @@
   .btn:disabled{ opacity:.5; cursor:not-allowed; }
   @media(max-width:700px){ .btn span.lbl{ display:none; } .btn{ padding:9px 10px; } }
 
-  /* ---------- Toolbar ribbon ---------- */
+  /* ---------- Toolbar ribbon (normal flow inside the sticky wrapper) ---------- */
   .ribbon{
     background:var(--panel);
     border-bottom:1px solid var(--line);
     padding:7px 10px;
     display:flex; gap:6px; align-items:center;
     overflow-x:auto;
+    overflow-y:hidden;
     -webkit-overflow-scrolling:touch;
-    position:sticky; top:53px; z-index:39;
-    scrollbar-width:thin;
+    flex-shrink:0;
   }
-  @media(min-width:700px){ .ribbon{ top:58px; flex-wrap:wrap; overflow-x:visible; padding:8px 14px; } }
+  @media(min-width:700px){ .ribbon{ flex-wrap:wrap; overflow-x:visible; padding:8px 14px; } }
 
   .rgroup{ display:flex; gap:2px; align-items:center; flex-shrink:0; padding:0 6px; border-right:1px solid var(--line-soft); }
   .rgroup:last-child{ border-right:none; }
@@ -131,9 +137,9 @@
   }
   .rlangbtn{ font-family:'Noto Sans Bengali','Space Grotesk',sans-serif; font-weight:600; font-size:12px; width:auto; padding:0 8px; }
 
-  /* ---------- Workspace ---------- */
-  .workspace{ flex:1; display:flex; justify-content:center; padding:20px 10px 50px; }
-  #pages{ display:flex; flex-direction:column; align-items:stretch; gap:22px; width:100%; max-width:var(--page-w); margin:0 auto; }
+  /* ---------- Workspace — page fills 100% of the available width on any device ---------- */
+  .workspace{ flex:1; display:flex; justify-content:center; padding:20px 8px 50px; }
+  #pages{ display:flex; flex-direction:column; align-items:stretch; gap:22px; width:100%; }
 
   .page-shell{ position:relative; width:100%; }
   .page-frame-label{
@@ -226,7 +232,7 @@
 
   .add-page-btn{
     display:flex; align-items:center; justify-content:center; gap:8px;
-    width:100%; max-width:var(--page-w); margin:0 auto;
+    width:100%;
     padding:14px; border:2px dashed #b9b19c; border-radius:var(--radius-md);
     background:transparent; color:var(--muted); cursor:pointer; font-size:13.5px;
   }
@@ -283,7 +289,6 @@
   }
   .row2{ display:flex; gap:10px; }
   .row2 > *{ flex:1; }
-  .row4{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   .switch-row{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:10px; }
   .switch-row label{ font-size:13px; font-weight:500; color:var(--ink-900); cursor:pointer; }
   .switch{ position:relative; width:42px; height:24px; flex-shrink:0; display:inline-block; cursor:pointer; }
@@ -323,9 +328,19 @@
 
   .hint{ font-size:11.5px; color:var(--muted); margin:0; line-height:1.5; }
 
+  .sync-box{
+    background:#fff; border:1px solid var(--line); border-radius:var(--radius-md);
+    padding:12px; margin-bottom:10px;
+  }
+  .sync-box p.hint{ margin-bottom:10px; }
+  .sync-actions{ display:flex; gap:8px; }
+  .sync-actions .btn{ flex:1; justify-content:center; font-size:12.5px; padding:9px 8px; }
+  .btn-outline{ background:#fff; color:var(--ink-900); border:1px solid var(--line); }
+  .btn-outline:hover{ background:#efeadd; }
+
   /* ---------- Print ---------- */
   @media print{
-    header.topbar, .ribbon, .drawer, .overlay, .page-frame-label, .add-page-btn, .save-status, #toastEl{ display:none !important; }
+    .app-chrome, .drawer, .overlay, .page-frame-label, .add-page-btn, .save-status, #toastEl{ display:none !important; }
     html, body{ background:#fff !important; overflow:visible !important; }
     .workspace{ padding:0 !important; display:block !important; }
     #pages{ gap:0 !important; display:block !important; max-width:none !important; width:auto !important; }
@@ -342,84 +357,86 @@
 <body>
 <div id="app">
 
-  <header class="topbar">
-    <div class="brand">
-      <div class="mark">কাগজ<span>.</span></div>
-      <div class="sub">A4 পেজ পিডিএফ লেখক ও তৈরির টুল</div>
-    </div>
-    <div class="topbar-actions">
-      <button class="btn btn-ghost" id="settingsBtn" title="ডকুমেন্ট সেটিংস">⚙ <span class="lbl">সেটিংস</span></button>
-      <button class="btn btn-ghost" id="printBtn" title="প্রিন্ট করুন">🖨 <span class="lbl">প্রিন্ট</span></button>
-      <button class="btn btn-seal" id="downloadBtn" title="পিডিএফ ডাউনলোড করুন">⬇ <span class="lbl">PDF ডাউনলোড</span></button>
-    </div>
-  </header>
+  <div class="app-chrome">
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark">কাগজ<span>.</span></div>
+        <div class="sub">A4 পেজ পিডিএফ লেখক ও তৈরির টুল</div>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn btn-ghost" id="settingsBtn" title="ডকুমেন্ট সেটিংস">⚙ <span class="lbl">সেটিংস</span></button>
+        <button class="btn btn-ghost" id="printBtn" title="প্রিন্ট করুন">🖨 <span class="lbl">প্রিন্ট</span></button>
+        <button class="btn btn-seal" id="downloadBtn" title="পিডিএফ ডাউনলোড করুন">⬇ <span class="lbl">PDF ডাউনলোড</span></button>
+      </div>
+    </header>
 
-  <div class="ribbon" id="ribbon">
-    <div class="rgroup">
-      <select class="rsel" id="blockSel" title="স্টাইল">
-        <option value="P">প্যারাগ্রাফ</option>
-        <option value="H1">শিরোনাম ১</option>
-        <option value="H2">শিরোনাম ২</option>
-        <option value="H3">শিরোনাম ৩</option>
-        <option value="BLOCKQUOTE">উদ্ধৃতি</option>
-      </select>
-    </div>
-    <div class="rgroup">
-      <select class="rsel" id="fontSel" title="ফন্ট (আগে টেক্সট সিলেক্ট করুন)">
-        <option value="'SolaimanLipi','Times New Roman',serif" selected>ডিফল্ট (স্বয়ংক্রিয়)</option>
-        <option value="'SolaimanLipi',serif">SolaimanLipi</option>
-        <option value="'Times New Roman',serif">Times New Roman</option>
-        <option value="Arial,sans-serif">Arial</option>
-        <option value="'Courier New',monospace">Courier New</option>
-        <option value="Georgia,serif">Georgia</option>
-      </select>
-      <select class="rsel" id="sizeSel" title="ফন্ট সাইজ (আগে টেক্সট সিলেক্ট করুন)">
-        <option value="10">10pt</option>
-        <option value="11">11pt</option>
-        <option value="12" selected>12pt</option>
-        <option value="14">14pt</option>
-        <option value="16">16pt</option>
-        <option value="18">18pt</option>
-        <option value="24">24pt</option>
-        <option value="32">32pt</option>
-      </select>
-    </div>
-    <div class="rgroup">
-      <button class="ricon rlangbtn" data-lang="bn" title="নির্বাচিত অংশ বাংলা ফন্টে দেখান">বাং</button>
-      <button class="ricon rlangbtn" data-lang="en" title="Show selection in English font">EN</button>
-    </div>
-    <div class="rgroup">
-      <button class="ricon" data-cmd="bold" title="Bold"><b>B</b></button>
-      <button class="ricon" data-cmd="italic" title="Italic"><i>I</i></button>
-      <button class="ricon" data-cmd="underline" title="Underline"><u>U</u></button>
-      <button class="ricon" data-cmd="strikeThrough" title="Strikethrough"><s>S</s></button>
-    </div>
-    <div class="rgroup">
-      <input class="rcolor" type="color" id="foreColor" value="#262421" title="লেখার রঙ (আগে টেক্সট সিলেক্ট করুন)">
-      <input class="rcolor" type="color" id="backColor" value="#fff6a3" title="হাইলাইট রঙ (আগে টেক্সট সিলেক্ট করুন)">
-    </div>
-    <div class="rgroup">
-      <button class="ricon" data-cmd="justifyLeft" title="বামে">⟸</button>
-      <button class="ricon" data-cmd="justifyCenter" title="মাঝে">≡</button>
-      <button class="ricon" data-cmd="justifyRight" title="ডানে">⟹</button>
-      <button class="ricon" data-cmd="justifyFull" title="জাস্টিফাই">▤</button>
-    </div>
-    <div class="rgroup">
-      <button class="ricon" data-cmd="insertUnorderedList" title="বুলেট লিস্ট">•≡</button>
-      <button class="ricon" data-cmd="insertOrderedList" title="নাম্বার লিস্ট">1≡</button>
-      <button class="ricon" data-cmd="outdent" title="Outdent">⇤</button>
-      <button class="ricon" data-cmd="indent" title="Indent">⇥</button>
-    </div>
-    <div class="rgroup">
-      <button class="ricon" data-cmd="superscript" title="Superscript">x²</button>
-      <button class="ricon" data-cmd="subscript" title="Subscript">x₂</button>
-      <button class="ricon" id="linkBtn" title="লিঙ্ক যোগ করুন">🔗</button>
-      <button class="ricon" id="hrBtn" title="Horizontal line">―</button>
-      <button class="ricon" id="clearFmtBtn" title="ফরম্যাট মুছুন">Tx</button>
-    </div>
-    <div class="rgroup">
-      <button class="ricon" data-cmd="undo" title="Undo">↺</button>
-      <button class="ricon" data-cmd="redo" title="Redo">↻</button>
+    <div class="ribbon" id="ribbon">
+      <div class="rgroup">
+        <select class="rsel" id="blockSel" title="স্টাইল">
+          <option value="P">প্যারাগ্রাফ</option>
+          <option value="H1">শিরোনাম ১</option>
+          <option value="H2">শিরোনাম ২</option>
+          <option value="H3">শিরোনাম ৩</option>
+          <option value="BLOCKQUOTE">উদ্ধৃতি</option>
+        </select>
+      </div>
+      <div class="rgroup">
+        <select class="rsel" id="fontSel" title="ফন্ট (আগে টেক্সট সিলেক্ট করুন)">
+          <option value="'SolaimanLipi','Times New Roman',serif" selected>ডিফল্ট (স্বয়ংক্রিয়)</option>
+          <option value="'SolaimanLipi',serif">SolaimanLipi</option>
+          <option value="'Times New Roman',serif">Times New Roman</option>
+          <option value="Arial,sans-serif">Arial</option>
+          <option value="'Courier New',monospace">Courier New</option>
+          <option value="Georgia,serif">Georgia</option>
+        </select>
+        <select class="rsel" id="sizeSel" title="ফন্ট সাইজ (আগে টেক্সট সিলেক্ট করুন)">
+          <option value="10">10pt</option>
+          <option value="11">11pt</option>
+          <option value="12" selected>12pt</option>
+          <option value="14">14pt</option>
+          <option value="16">16pt</option>
+          <option value="18">18pt</option>
+          <option value="24">24pt</option>
+          <option value="32">32pt</option>
+        </select>
+      </div>
+      <div class="rgroup">
+        <button class="ricon rlangbtn" data-lang="bn" title="নির্বাচিত অংশ বাংলা ফন্টে দেখান">বাং</button>
+        <button class="ricon rlangbtn" data-lang="en" title="Show selection in English font">EN</button>
+      </div>
+      <div class="rgroup">
+        <button class="ricon" data-cmd="bold" title="Bold"><b>B</b></button>
+        <button class="ricon" data-cmd="italic" title="Italic"><i>I</i></button>
+        <button class="ricon" data-cmd="underline" title="Underline"><u>U</u></button>
+        <button class="ricon" data-cmd="strikeThrough" title="Strikethrough"><s>S</s></button>
+      </div>
+      <div class="rgroup">
+        <input class="rcolor" type="color" id="foreColor" value="#262421" title="লেখার রঙ (আগে টেক্সট সিলেক্ট করুন)">
+        <input class="rcolor" type="color" id="backColor" value="#fff6a3" title="হাইলাইট রঙ (আগে টেক্সট সিলেক্ট করুন)">
+      </div>
+      <div class="rgroup">
+        <button class="ricon" data-cmd="justifyLeft" title="বামে">⟸</button>
+        <button class="ricon" data-cmd="justifyCenter" title="মাঝে">≡</button>
+        <button class="ricon" data-cmd="justifyRight" title="ডানে">⟹</button>
+        <button class="ricon" data-cmd="justifyFull" title="জাস্টিফাই">▤</button>
+      </div>
+      <div class="rgroup">
+        <button class="ricon" data-cmd="insertUnorderedList" title="বুলেট লিস্ট">•≡</button>
+        <button class="ricon" data-cmd="insertOrderedList" title="নাম্বার লিস্ট">1≡</button>
+        <button class="ricon" data-cmd="outdent" title="Outdent">⇤</button>
+        <button class="ricon" data-cmd="indent" title="Indent">⇥</button>
+      </div>
+      <div class="rgroup">
+        <button class="ricon" data-cmd="superscript" title="Superscript">x²</button>
+        <button class="ricon" data-cmd="subscript" title="Subscript">x₂</button>
+        <button class="ricon" id="linkBtn" title="লিঙ্ক যোগ করুন">🔗</button>
+        <button class="ricon" id="hrBtn" title="Horizontal line">―</button>
+        <button class="ricon" id="clearFmtBtn" title="ফরম্যাট মুছুন">Tx</button>
+      </div>
+      <div class="rgroup">
+        <button class="ricon" data-cmd="undo" title="Undo">↺</button>
+        <button class="ricon" data-cmd="redo" title="Redo">↻</button>
+      </div>
     </div>
   </div>
 
@@ -435,6 +452,18 @@
   <div class="drawer-head">
     <h2>ডকুমেন্ট সেটিংস</h2>
     <button id="closeDrawer">✕</button>
+  </div>
+
+  <div class="dsection">
+    <h3>যেকোনো ডিভাইসে এডিট করুন</h3>
+    <div class="sync-box">
+      <p class="hint">এই ব্রাউজারে লেখা শুধু এই ডিভাইসেই সংরক্ষিত থাকে। অন্য ডিভাইসে একই লেখা ও সেটিংস আনতে, এখান থেকে ফাইল ডাউনলোড করে সেই ডিভাইসে ইমপোর্ট করুন।</p>
+      <div class="sync-actions">
+        <button class="btn btn-outline" id="exportBtn">⬇ এক্সপোর্ট (.kagoj)</button>
+        <button class="btn btn-outline" id="importBtn">⬆ ইমপোর্ট করুন</button>
+      </div>
+      <input type="file" id="importInput" accept=".json,.kagoj,application/json" style="display:none;">
+    </div>
   </div>
 
   <div class="dsection">
@@ -544,7 +573,7 @@
     </p>
   </div>
 
-  <div class="dsection">
+  <div class="dsection" style="border-bottom:none;">
     <h3>ডকুমেন্ট</h3>
     <button class="btn btn-ghost" id="newDocBtn" style="width:100%;justify-content:center;color:#9c3b2a;border-color:#9c3b2a;">🗑 নতুন ডকুমেন্ট (সব মুছুন)</button>
   </div>
@@ -556,16 +585,19 @@
 (function(){
   "use strict";
 
-  const STORAGE_KEY = "a4pdf_document_v2";
+  const STORAGE_KEY = "a4pdf_document_v3";
   const pagesEl = document.getElementById('pages');
 
-  let state = {
-    pagesHTML: [""],
-    title: { on:false, text:"" },
-    pageNum: { on:true, format:"num" },
-    watermark: { on:false, type:"text", text:"DRAFT", image:"", opacity:10, size:40, rotate:-35 },
-    pageSetup: { orientation:"portrait", margin:"normal" }
-  };
+  function defaultState(){
+    return {
+      pagesHTML: [""],
+      title: { on:false, text:"" },
+      pageNum: { on:true, format:"num" },
+      watermark: { on:false, type:"text", text:"DRAFT", image:"", opacity:10, size:40, rotate:-35 },
+      pageSetup: { orientation:"portrait", margin:"normal" }
+    };
+  }
+  let state = defaultState();
 
   const MARGIN_MM = { narrow:10, normal:20, wide:30 };
 
@@ -737,7 +769,7 @@
     document.querySelector('.workspace').appendChild(btn);
   }
 
-  // ---------- Selection tracking (fixes toolbar losing the highlighted text) ----------
+  // ---------- Selection tracking (keeps the toolbar working after clicking a select/color input) ----------
   let savedRange = null;
 
   document.addEventListener('selectionchange', () => {
@@ -780,13 +812,13 @@
   document.querySelectorAll('[data-cmd]').forEach(btn => {
     btn.addEventListener('click', () => {
       document.execCommand(btn.dataset.cmd, false, null);
-      const active = document.activeElement && document.activeElement.closest('.page-content');
+      const active = document.activeElement && document.activeElement.closest && document.activeElement.closest('.page-content');
       if(active) persistEditable(active);
     });
   });
 
   document.getElementById('blockSel').addEventListener('change', function(){
-    const editable = restoreSavedSelection() || document.activeElement.closest?.('.page-content');
+    const editable = restoreSavedSelection() || (document.activeElement && document.activeElement.closest && document.activeElement.closest('.page-content'));
     document.execCommand('formatBlock', false, this.value);
     if(editable) persistEditable(editable);
   });
@@ -843,7 +875,7 @@
     const url = prompt('লিঙ্ক (URL) লিখুন:', 'https://');
     if(url){
       document.execCommand('createLink', false, url);
-      const active = document.activeElement && document.activeElement.closest('.page-content');
+      const active = document.activeElement && document.activeElement.closest && document.activeElement.closest('.page-content');
       if(active) persistEditable(active);
     }
   });
@@ -943,17 +975,62 @@
   bindRange('wmSize','wmSizeOut','size','');
   bindRange('wmRotate','wmRotateOut','rotate','°');
 
+  // ---------- Export / Import (cross-device transfer of settings + all page text) ----------
+  document.getElementById('exportBtn').addEventListener('click', () => {
+    try{
+      const dataStr = JSON.stringify(state, null, 2);
+      const blob = new Blob([dataStr], { type:'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const stamp = new Date().toISOString().slice(0,10);
+      const namePart = (state.title.text || 'document').trim().replace(/[^\w\u0980-\u09FF\- ]/g,'').slice(0,40) || 'document';
+      a.href = url;
+      a.download = `${namePart}-${stamp}.kagoj.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      toast('ফাইল ডাউনলোড হয়েছে — অন্য ডিভাইসে ইমপোর্ট করুন');
+    }catch(err){
+      toast('এক্সপোর্ট ব্যর্থ হয়েছে');
+    }
+  });
+
+  document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importInput').click());
+  document.getElementById('importInput').addEventListener('change', function(){
+    const file = this.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e){
+      try{
+        const parsed = JSON.parse(e.target.result);
+        if(!parsed || !Array.isArray(parsed.pagesHTML) || parsed.pagesHTML.length === 0){
+          throw new Error('invalid file');
+        }
+        if(!confirm('এই ফাইলের লেখা ও সেটিংস বর্তমান ডকুমেন্ট প্রতিস্থাপন করবে। এগিয়ে যেতে চান?')){
+          this.value = '';
+          return;
+        }
+        state = Object.assign(defaultState(), parsed);
+        syncDrawerFromState();
+        applyPageSetupCSS();
+        renderPages();
+        scheduleSave();
+        closeDrawer();
+        toast('ডকুমেন্ট সফলভাবে ইমপোর্ট হয়েছে');
+      }catch(err){
+        alert('ফাইলটি সঠিক নয় বা পড়া যায়নি। শুধু এই ওয়েবসাইট থেকে এক্সপোর্ট করা .kagoj.json ফাইল ব্যবহার করুন।');
+      }
+      document.getElementById('importInput').value = '';
+    };
+    reader.readAsText(file);
+  });
+
   // New document
   document.getElementById('newDocBtn').addEventListener('click', () => {
     if(!confirm('পুরো ডকুমেন্ট মুছে নতুন করে শুরু করতে চান? এই কাজটি ফিরিয়ে আনা যাবে না।')) return;
     localStorage.removeItem(STORAGE_KEY);
-    state = {
-      pagesHTML: [""],
-      title: { on:false, text:"" },
-      pageNum: { on:true, format:"num" },
-      watermark: { on:false, type:"text", text:"DRAFT", image:"", opacity:10, size:40, rotate:-35 },
-      pageSetup: { orientation:"portrait", margin:"normal" }
-    };
+    state = defaultState();
     syncDrawerFromState();
     applyPageSetupCSS();
     renderPages();
@@ -981,7 +1058,7 @@
     document.querySelectorAll('#marginSeg button').forEach(b => b.classList.toggle('on', b.dataset.m === state.pageSetup.margin));
   }
 
-  // ---------- Autosave ----------
+  // ---------- Autosave (this device only — use Export/Import above to move to another device) ----------
   let saveTimer = null;
   function scheduleSave(){
     clearTimeout(saveTimer);
@@ -990,7 +1067,7 @@
       try{
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         const t = new Date();
-        document.getElementById('saveStatus').innerHTML = '<b>✓ সংরক্ষিত হয়েছে</b> — ' + t.toLocaleTimeString('bn-BD');
+        document.getElementById('saveStatus').innerHTML = '<b>✓ এই ডিভাইসে সংরক্ষিত</b> — ' + t.toLocaleTimeString('bn-BD');
       }catch(err){
         document.getElementById('saveStatus').textContent = 'সংরক্ষণ ব্যর্থ হয়েছে (ব্রাউজার স্টোরেজ পূর্ণ হতে পারে)।';
       }
@@ -1002,9 +1079,8 @@
     if(!raw) return;
     try{
       const parsed = JSON.parse(raw);
-      state = Object.assign(state, parsed);
+      state = Object.assign(defaultState(), parsed);
       if(!Array.isArray(state.pagesHTML) || state.pagesHTML.length === 0) state.pagesHTML = [""];
-      if(!state.pageSetup) state.pageSetup = { orientation:"portrait", margin:"normal" };
     }catch(err){ /* ignore corrupt save */ }
   }
 
