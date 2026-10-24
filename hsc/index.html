@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HSC Result Tracker | এইচএসসি রেজাল্ট ট্র্যাকার</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700;800&display=swap">
+<style>
+:root{--bg:#fff8f2;--card:#fff;--tx:#1f1a17;--mu:#80736a;--bd:#f1e5da;--a:#ff6b2c;--b:#ffa23a;--g:#16a34a;--sh:0 10px 30px rgba(140,80,30,.09)}
+*{box-sizing:border-box;margin:0}
+body{font-family:"Noto Sans Bengali",Inter,system-ui,sans-serif;background:var(--bg);color:var(--tx);overflow-x:hidden}
+.bg{position:fixed;inset:0;z-index:-1;background:radial-gradient(700px 420px at 10% -5%,#ffd2b680,transparent),radial-gradient(600px 400px at 95% 5%,#ffe6a890,transparent),radial-gradient(700px 400px at 50% 110%,#ffe0d055,transparent)}
+.w{max-width:1120px;margin:auto;padding:0 20px}
+nav{display:flex;justify-content:space-between;align-items:center;padding:22px 0}
+.logo{font-weight:800;font-size:20px;display:flex;gap:10px;align-items:center}
+.logo i{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--a),var(--b));display:grid;place-items:center;font-style:normal;box-shadow:0 8px 18px #ff6b2c44}
+.chip{font-size:12px;font-weight:600;padding:7px 13px;border-radius:99px;background:#fff;border:1px solid var(--bd);color:var(--mu);box-shadow:var(--sh)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--g);margin-right:7px;animation:p 1.4s infinite}@keyframes p{50%{opacity:.25}}
+.hero{text-align:center;padding:34px 0 10px}
+h1{font-size:clamp(34px,6vw,62px);line-height:1.05;letter-spacing:-.5px;line-height:1.25;font-weight:800}
+h1 span{background:linear-gradient(90deg,var(--a),var(--b));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--mu);margin:14px auto 0;max-width:540px;line-height:1.6}
+/* clock */
+.cc{max-width:960px;margin:38px auto 0;background:linear-gradient(180deg,#fff,#fffaf6);border:1px solid var(--bd);border-radius:34px;padding:26px 26px 24px;box-shadow:0 30px 70px rgba(160,80,20,.14);position:relative;overflow:hidden}
+.cc:before{content:"";position:absolute;width:420px;height:420px;right:-140px;top:-200px;border-radius:50%;background:radial-gradient(#ffb36b55,transparent 70%)}
+.ch{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:13px;color:var(--mu);font-weight:600;flex-wrap:wrap;gap:8px;position:relative}
+.ch b{color:var(--tx);font-size:15px}
+.cl{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(6px,2vw,22px);position:relative}
+.dl{text-align:center}
+.dw{position:relative;aspect-ratio:1;max-width:210px;margin:auto}
+.dw svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.dn{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.dn b{font-size:clamp(24px,6.2vw,58px);font-weight:800;letter-spacing:0;line-height:1.1;font-variant-numeric:tabular-nums;color:var(--tx)}
+.dn span{font-size:clamp(8px,1.5vw,11px);letter-spacing:2px;font-weight:700;color:var(--a);text-transform:uppercase;margin-top:6px}
+.pop{animation:pop .4s cubic-bezier(.2,.9,.3,1.4)}@keyframes pop{from{transform:scale(.82);opacity:.4}}
+.bar{margin-top:22px;height:10px;border-radius:99px;background:#f6ece4;overflow:hidden;position:relative}
+.bar i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--a),var(--b));transition:width 1s;position:relative}
+.bar i:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,#fff8,transparent);animation:sh 2s infinite}@keyframes sh{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.bm{display:flex;justify-content:space-between;font-size:12px;color:var(--mu);margin-top:8px;font-weight:600}
+.done{display:none;text-align:center;font-size:20px;font-weight:800;color:var(--g);margin-top:18px}
+/* embed */
+.fr{background:linear-gradient(135deg,var(--a),var(--b) 55%,#ffd9a0);padding:2px;border-radius:30px;box-shadow:0 30px 70px rgba(160,80,20,.16)}
+.fi{background:#fff;border-radius:28px;overflow:hidden}
+.tb{display:flex;align-items:center;gap:14px;padding:12px 16px;background:linear-gradient(#fffdfb,#fff6ee);border-bottom:1px solid var(--bd);flex-wrap:wrap}
+.dts{display:flex;gap:7px}.dts i{width:12px;height:12px;border-radius:50%;background:#ff5f57}.dts i:nth-child(2){background:#febc2e}.dts i:nth-child(3){background:#28c840}
+.ad{flex:1;min-width:180px;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--bd);border-radius:99px;padding:8px 14px;font-size:13px;color:var(--mu);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;box-shadow:inset 0 1px 2px rgba(120,70,30,.06)}
+.ad b{color:var(--g);font-weight:400}
+.tbs{display:flex;gap:6px;background:#f6ece4;padding:4px;border-radius:99px}
+.tbs button{border:0;background:transparent;padding:7px 14px;border-radius:99px;font:600 12.5px inherit;font-family:inherit;color:var(--mu);cursor:pointer;transition:.2s}
+.tbs button.on{background:#fff;color:var(--a);box-shadow:0 3px 10px rgba(160,80,20,.14)}
+.ib{width:36px;height:36px;border-radius:50%;border:1px solid var(--bd);background:#fff;cursor:pointer;font-size:15px;color:var(--tx);text-decoration:none;display:grid;place-items:center;transition:.2s}.ib:hover{background:var(--a);color:#fff;border-color:var(--a)}
+.vw{position:relative;height:740px;background:#fff}
+.vw:before{content:"";position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px;border:3px solid #f6ece4;border-top-color:var(--a);border-radius:50%;animation:sp .8s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+.vw iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent}
+.fn{padding:12px 18px;font-size:12.5px;color:var(--mu);background:#fffaf6;border-top:1px solid var(--bd);text-align:center}.fn a{color:var(--a);font-weight:700;text-decoration:none}
+@media(max-width:600px){.vw{height:600px}.dts{display:none}}
+/* sections */
+section{margin-top:84px}
+.sh{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap;margin-bottom:24px}
+h2{font-size:30px;letter-spacing:-.8px}.d{color:var(--mu);font-size:14px;margin-top:6px}
+.fw{display:grid;grid-template-columns:1.3fr 1fr;gap:20px}
+.box{background:var(--card);border:1px solid var(--bd);border-radius:26px;padding:26px;box-shadow:var(--sh)}
+form{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+label{font-size:12px;font-weight:600;color:var(--mu);display:block;margin-bottom:6px}
+select,input.f{width:100%;padding:13px 14px;border-radius:13px;border:1.5px solid var(--bd);background:#fffaf6;color:var(--tx);font-size:14px;font-family:inherit;outline:0;transition:.2s}
+select:focus,input.f:focus{border-color:var(--a);box-shadow:0 0 0 4px #ff6b2c1c;background:#fff}
+.full{grid-column:1/-1}
+.btn{padding:14px 22px;border:0;border-radius:14px;background:linear-gradient(135deg,var(--a),var(--b));color:#fff;font-weight:700;cursor:pointer;font-size:14px;text-decoration:none;display:inline-flex;gap:8px;justify-content:center;align-items:center;box-shadow:0 10px 22px #ff6b2c40;font-family:inherit;transition:.2s}
+.btn:hover{transform:translateY(-2px)}
+.btn.o{background:#fff;color:var(--tx);border:1.5px solid var(--bd);box-shadow:none}
+.side h3{font-size:16px;margin-bottom:14px}
+.st{display:flex;gap:12px;margin-bottom:14px;font-size:13.5px;color:var(--mu);line-height:1.5}.st b{flex:none;width:26px;height:26px;border-radius:9px;background:#ffe9dc;color:var(--a);display:grid;place-items:center;font-size:12px}
+#res{display:none;margin-top:16px;padding:18px;border-radius:16px;background:#fff4ec;border:1px solid var(--bd);font-size:14px;line-height:1.7}
+#res code{display:block;background:#fff;border:1px dashed #f3c3a5;padding:10px 12px;border-radius:10px;margin:8px 0 12px;font-weight:700;color:var(--a)}
+#res .r{display:flex;gap:10px;flex-wrap:wrap}
+/* boards */
+.srch{padding:12px 16px;border-radius:14px;border:1.5px solid var(--bd);background:#fff;min-width:230px;font-size:14px;outline:0;font-family:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:18px}
+.bc{background:var(--card);border:1px solid var(--bd);border-radius:26px;overflow:hidden;box-shadow:var(--sh);transition:.3s;position:relative}
+.bc:hover{transform:translateY(-6px);box-shadow:0 24px 50px rgba(160,80,20,.16)}
+.top{height:84px;background:linear-gradient(135deg,var(--c1),var(--c2));position:relative}
+.top em{position:absolute;right:16px;top:12px;font-style:normal;font-size:11px;font-weight:800;letter-spacing:1.5px;color:#fff;background:#ffffff30;padding:4px 10px;border-radius:99px}
+.lg{width:72px;height:72px;border-radius:50%;background:#fff;border:4px solid #fff;box-shadow:0 8px 20px #0002;margin:-36px 0 0 22px;position:relative;display:grid;place-items:center;overflow:hidden;font-weight:800;font-size:26px;color:var(--c1)}
+.lg img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:7px;background:#fff;display:none}
+.bb{padding:12px 22px 22px}.bb h3{font-size:19px}.bb p{font-size:13px;color:var(--mu);margin:2px 0 4px}.bb small{font-size:12px;color:var(--a);font-weight:600}
+.ac{display:flex;gap:8px;margin-top:16px}.ac a{flex:1;text-align:center;padding:10px;border-radius:12px;font-size:13px;font-weight:700;text-decoration:none}
+.ac a:first-child{background:var(--tx);color:#fff}.ac a:last-child{background:#fff0e6;color:var(--a)}
+footer{text-align:center;color:var(--mu);padding:60px 0 32px;font-size:14px}footer b{color:var(--tx);letter-spacing:1px}
+@media(max-width:820px){.fw{grid-template-columns:1fr}}@media(max-width:520px){form{grid-template-columns:1fr}.pr{gap:4px}.cl{gap:3px}}
+</style></head><body><div class="bg"></div>
+<div class="w">
+<nav><div class="logo"><i>🎓</i>HSC Result Tracker</div><span class="chip"><span class="dot"></span>লাইভ কাউন্টডাউন</span></nav>
+<div class="hero"><h1>এইচএসসি রেজাল্ট ২০২৬<br><span>আর বেশি দেরি নেই</span></h1>
+<p class="sub">কাউন্টডাউন দেখুন, মুহূর্তেই রেজাল্ট চেক করুন এবং সরাসরি আপনার শিক্ষা বোর্ডে যান।</p>
+<div class="cc"><div class="ch"><b>⏳ রেজাল্ট কাউন্টডাউন</b><span id="tl"></span></div>
+<div class="cl" id="clock"></div>
+<div class="bar"><i id="pb"></i></div><div class="bm"><span>পরীক্ষা শেষ</span><span id="pc">০%</span><span>রেজাল্ট দিবস</span></div>
+<div class="done" id="done">🎉 রেজাল্ট প্রকাশিত হয়েছে! নিচে আপনার ফলাফল দেখুন।</div></div></div>
+
+<section id="check"><div class="sh"><div><h2>রেজাল্ট দেখুন</h2><p class="d">সরকারি educationboardresults.gov.bd সিস্টেম ব্যবহার করে।</p></div></div>
+<div class="fw"><div class="box"><form id="rf">
+<div><label>পরীক্ষা</label><select id="ex"><option value="HSC">এইচএসসি</option><option value="ALIM">আলিম</option></select></div>
+<div><label>সাল</label><select id="yr"></select></div>
+<div class="full"><label>শিক্ষা বোর্ড</label><select id="bd"></select></div>
+<div><label>রোল নম্বর</label><input class="f" id="roll" required inputmode="numeric" placeholder="যেমন: 123456"></div>
+<div><label>রেজিস্ট্রেশন নম্বর</label><input class="f" id="reg" required inputmode="numeric" placeholder="১০ সংখ্যার নম্বর"></div>
+<button class="btn full">আমার রেজাল্ট দেখুন →</button></form><div id="res"></div></div>
+<div class="box side"><h3>যেভাবে কাজ করে</h3>
+<div class="st"><b>1</b>পরীক্ষা, বোর্ড, রোল ও রেজিস্ট্রেশন নম্বর দিন।</div>
+<div class="st"><b>2</b>আমরা সরকারি রেজাল্ট পোর্টাল খুলে দেব এবং আপনার তথ্য কপি করে রাখব।</div>
+<div class="st"><b>3</b>সেখানে ক্যাপচা সমাধান করে মার্কশিট দেখুন। চাইলে ১৬২২২ নম্বরে এসএমএস করেও রেজাল্ট পাবেন।</div></div></div></section>
+
+<section id="portal"><div class="sh"><div><h2>অফিসিয়াল পোর্টাল</h2><p class="d">এখান থেকেই সরকারি রেজাল্ট সিস্টেম ব্যবহার করুন।</p></div></div>
+<div class="fr"><div class="fi"><div class="tb"><div class="dts"><i></i><i></i><i></i></div>
+<div class="tbs"><button class="on" data-u="https://www.educationboardresults.gov.bd/">সরকারি পোর্টাল</button><button data-u="https://eboardresults.com/v2/home">eboardresults</button></div>
+<div class="ad"><b>🔒</b><span id="au">educationboardresults.gov.bd</span></div>
+<button class="ib" id="rl" title="রিলোড">↻</button><a class="ib" id="op" target="_blank" rel="noopener" title="নতুন ট্যাবে খুলুন" href="https://www.educationboardresults.gov.bd/">↗</a></div>
+<div class="vw"><iframe id="fm" src="https://www.educationboardresults.gov.bd/" title="অফিসিয়াল রেজাল্ট পোর্টাল" loading="lazy" referrerpolicy="no-referrer" allow="clipboard-write" sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-downloads"></iframe></div>
+<div class="fn">পোর্টাল খালি দেখালে বা লোড না হলে (সরকারি সাইট অনেক সময় অন্য সাইটে খুলতে দেয় না) <a id="op2" target="_blank" rel="noopener" href="https://www.educationboardresults.gov.bd/">নতুন ট্যাবে খুলুন ↗</a></div></div></div></section>
+
+<section><div class="sh"><div><h2>শিক্ষা বোর্ডসমূহ</h2><p class="d">সব বোর্ডের অফিসিয়াল ওয়েবসাইট ও রেজাল্ট পেজ।</p></div><input class="srch" id="q" placeholder="🔍  বোর্ড খুঁজুন…"></div>
+<div class="grid" id="boards"></div></section>
+<footer>©<b>MAHIN</b></footer></div>
+<script>
+const TARGET=new Date('2026-10-29T10:00:00+06:00'),START=new Date('2026-09-01T00:00:00+06:00');
+const PROXY_URL=''; // e.g. 'http://localhost:8787' — run result-proxy.js (ছাত্র নিজে ক্যাপচা সমাধান করে)
+const PORTAL='https://www.educationboardresults.gov.bd/';
+const bn=n=>String(n).replace(/\d/g,d=>'০১২৩৪৫৬৭৮৯'[d]);
+const WK='https://en.wikipedia.org/api/rest_v1/page/summary/',LC={};
+function logos(){document.querySelectorAll('img[data-w]').forEach(async im=>{const t=im.dataset.w;try{if(!LC[t])LC[t]=fetch(WK+encodeURIComponent(t)).then(r=>r.json());const j=await LC[t],u=(j.thumbnail||j.originalimage||{}).source;if(u){im.onload=()=>im.style.display='block';im.src=u}}catch(_){}})}
+const B=[['DHA','Dhaka','ঢাকা','dhakaeducationboard.gov.bd','Board_of_Intermediate_and_Secondary_Education,_Dhaka','#ff6b2c','#ffa23a'],
+['CHI','Chattogram','চট্টগ্রাম','bise-ctg.gov.bd','Board_of_Intermediate_and_Secondary_Education,_Chattogram','#0ea5e9','#2563eb'],
+['COM','Cumilla','কুমিল্লা','comillaboard.gov.bd','Board_of_Intermediate_and_Secondary_Education,_Cumilla','#10b981','#0d9488'],
+['JES','Jashore','যশোর','jessoreboard.gov.bd','Board_of_Intermediate_and_Secondary_Education,_Jashore','#f59e0b','#ef6c00'],
+['RAJ','Rajshahi','রাজশাহী','rajshahieducationboard.gov.bd','Board_of_Intermediate_and_Secondary_Education,_Rajshahi','#ec4899','#be185d'],
+['BAR','Barishal','বরিশাল','barisalboard.gov.bd','Board_of_Intermediate_and_Secondary_Education,_Barisal','#8b5cf6','#6d28d9'],
+['SYL','Sylhet','সিলেট','sylhetboard.gov.bd','Board_of_Intermediate_and_Secondary_Education,_Sylhet','#14b8a6','#0891b2'],
+['DIN','Dinajpur','দিনাজপুর','dinajpureducationboard.gov.bd','Board_of_Intermediate_and_Secondary_Education,_Dinajpur','#ef4444','#dc2626'],
+['MYM','Mymensingh','ময়মনসিংহ','bise-mymensingh.gov.bd','Board_of_Intermediate_and_Secondary_Education,_Mymensingh','#6366f1','#4338ca'],
+['MAD','Madrasah','মাদ্রাসা','bmeb.gov.bd','Bangladesh_Madrasah_Education_Board','#22c55e','#15803d'],
+['TEC','Technical','কারিগরি','bteb.gov.bd','Bangladesh_Technical_Education_Board','#f97316','#c2410c']];
+const bd=document.getElementById('bd');bd.innerHTML=B.map(b=>`<option value="${b[0]}">${b[2]}</option>`).join('');
+function draw(f=''){document.getElementById('boards').innerHTML=B.filter(b=>(b[1]+b[2]+b[0]).toLowerCase().includes(f.toLowerCase())).map(b=>`<div class="bc" style="--c1:${b[5]};--c2:${b[6]}"><div class="top"><em>${b[0]}</em></div><div class="lg">${b[2][0]}<img data-w="${b[4]}" alt="${b[2]} বোর্ডের লোগো" referrerpolicy="no-referrer"></div><div class="bb"><h3>${b[2]} শিক্ষা বোর্ড</h3><p>${b[1]} Education Board</p><small>${b[3]}</small><div class="ac"><a target="_blank" rel="noopener" href="https://${b[3]}">ওয়েবসাইট</a><a target="_blank" rel="noopener" href="${PORTAL}">রেজাল্ট ↗</a></div></div></div>`).join('')||'<p class="d">কোনো বোর্ড পাওয়া যায়নি।</p>';logos()}
+draw();document.getElementById('q').oninput=e=>draw(e.target.value);
+const y=new Date().getFullYear();document.getElementById('yr').innerHTML=Array.from({length:8},(_,i)=>`<option value="${y-i}">${bn(y-i)}</option>`).join('');
+// clock
+const U=[['d','দিন'],['h','ঘণ্টা'],['m','মিনিট'],['s','সেকেন্ড']],R=80,CI=2*Math.PI*R;
+let ticks='';for(let i=0;i<60;i++){const a=i*6*Math.PI/180,l=i%5?4:9,r1=100,r2=r1-l;ticks+=`<line x1="${100+r1*Math.sin(a)}" y1="${100-r1*Math.cos(a)}" x2="${100+r2*Math.sin(a)}" y2="${100-r2*Math.cos(a)}" stroke="${i%5?'#e6d6c8':'#c9b3a1'}" stroke-width="${i%5?1.2:2}" stroke-linecap="round"/>`}
+document.getElementById('clock').innerHTML=U.map(u=>`<div class="dl"><div class="dw"><svg viewBox="0 0 200 200"><defs><linearGradient id="g${u[0]}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6b2c"/><stop offset="1" stop-color="#ffb347"/></linearGradient><filter id="f${u[0]}" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#ff6b2c" flood-opacity=".28"/></filter></defs><circle cx="100" cy="100" r="74" fill="#fff" stroke="#f6ece4" stroke-width="1" filter="url(#f${u[0]})"/>${ticks}<circle cx="100" cy="100" r="${R}" fill="none" stroke="#f6ece4" stroke-width="9"/><circle id="a${u[0]}" cx="100" cy="100" r="${R}" fill="none" stroke="url(#g${u[0]})" stroke-width="9" stroke-linecap="round" stroke-dasharray="${CI}" stroke-dashoffset="${CI}" transform="rotate(-90 100 100)"/><circle id="k${u[0]}" r="6.5" fill="#fff" stroke="#ff6b2c" stroke-width="3.5"/></svg><div class="dn"><b id="n${u[0]}">00</b><span>${u[1]}</span></div></div></div>`).join('');
+const pv={},TD=Math.max(1,Math.ceil((TARGET-START)/864e5));
+function setArc(k,f){f=Math.min(1,Math.max(0,f));document.getElementById('a'+k).style.strokeDashoffset=CI*(1-f);const an=f*2*Math.PI,kn=document.getElementById('k'+k);kn.setAttribute('cx',100+R*Math.sin(an));kn.setAttribute('cy',100-R*Math.cos(an));kn.style.opacity=f>0.005?1:0}
+function frame(){const now=Date.now(),ms=Math.max(0,TARGET-now),s=Math.floor(ms/1000);
+ document.getElementById('done').style.display=s?'none':'block';
+ const v={d:Math.floor(s/86400),h:Math.floor(s%86400/3600),m:Math.floor(s%3600/60),s:s%60};
+ const sf=(ms%60000)/60000,mf=(v.m+sf)/60,hf=(v.h+mf)/24,df=(v.d+hf)/TD;
+ setArc('s',sf);setArc('m',mf);setArc('h',hf);setArc('d',df);
+ U.forEach(([k])=>{const t=String(v[k]).padStart(2,'0');if(pv[k]!==t){const n=document.getElementById('n'+k);n.textContent=bn(t);n.classList.remove('pop');void n.offsetWidth;n.classList.add('pop');pv[k]=t}});
+ const pc=Math.min(100,Math.max(0,(now-START)/(TARGET-START)*100));
+ document.getElementById('pb').style.width=pc+'%';document.getElementById('pc').textContent=bn(Math.round(pc))+'%';
+ document.getElementById('tl').textContent='রেজাল্ট প্রকাশ: ২৯ অক্টোবর ২০২৬, সকাল ১০:০০';
+ requestAnimationFrame(frame)}
+frame();
+// result
+const res=document.getElementById('res'),PORTAL2='https://eboardresults.com/v2/home';
+let ctx=null;const g=i=>document.getElementById(i);
+const vals=()=>({exam:g('ex').value,year:g('yr').value,board:g('bd').value,roll:g('roll').value.trim(),reg:g('reg').value.trim()});
+function manual(note=''){const v=vals(),sms=`${v.exam} ${v.board} ${v.roll} ${v.year}`;try{navigator.clipboard.writeText(`Roll: ${v.roll}
+Reg: ${v.reg}`)}catch(_){}
+ res.innerHTML=`${note}<b>আপনার তথ্য প্রস্তুত।</b> রোল <b>${bn(v.roll)}</b> · রেজিস্ট্রেশন <b>${bn(v.reg)}</b> (কপি করা হয়েছে)।<br>নিচের যেকোনো সরকারি পোর্টালে গিয়ে নম্বর পেস্ট করুন ও ক্যাপচা সমাধান করুন।<div class="r" style="margin:12px 0"><a class="btn" target="_blank" rel="noopener" href="${PORTAL}">educationboardresults.gov.bd ↗</a><a class="btn o" target="_blank" rel="noopener" href="${PORTAL2}">eboardresults.com ↗</a></div><b>অথবা এসএমএসে</b> (ইন্টারনেট ছাড়াই) — ১৬২২২ নম্বরে পাঠান:<code>${sms}</code><a class="btn o" href="sms:16222?&body=${encodeURIComponent(sms)}">এসএমএস পাঠান</a>`}
+async function loadCaptcha(msg=''){res.innerHTML='ক্যাপচা লোড হচ্ছে…';
+ try{const r=await fetch(PROXY_URL+'/captcha');ctx=await r.json();if(!ctx.img)throw 0;
+  res.innerHTML=`${msg}<b>নিরাপত্তা কোড</b> — ছবিতে যা দেখছেন তা লিখুন:<img src="${ctx.img}" alt="ক্যাপচা" style="display:block;margin:10px 0;border-radius:10px;background:#fff;max-width:100%"><input class="f" id="cap" autocomplete="off" placeholder="কোড লিখুন"><div class="r" style="margin-top:12px"><button class="btn" id="cgo" type="button">রেজাল্ট দেখুন</button><button class="btn o" id="cnew" type="button">নতুন কোড</button></div>`;
+  g('cnew').onclick=()=>loadCaptcha();g('cgo').onclick=fetchResult}
+ catch(_){manual('<p style="color:#c2410c;margin-bottom:10px">সার্ভারের সাথে সংযোগ করা যায়নি, বিকল্প উপায় দেখুন।</p>')}}
+async function fetchResult(){const code=g('cap').value.trim();if(!code)return;res.innerHTML='ফলাফল আনা হচ্ছে…';
+ try{const r=await fetch(PROXY_URL+'/result',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({...vals(),sid:ctx.sid,captcha:code})});const j=await r.json();
+  if(!r.ok||!j.text)return loadCaptcha('<p style="color:#c2410c;margin-bottom:10px">'+(j.error||'ফলাফল পাওয়া যায়নি, কোডটি ঠিক আছে কিনা দেখে আবার চেষ্টা করুন।')+'</p>');
+  res.innerHTML='<b>আপনার ফলাফল</b><pre id="ro" style="white-space:pre-wrap;font:inherit;margin-top:10px"></pre><div class="r"><button class="btn o" type="button" onclick="print()">প্রিন্ট করুন</button></div>';g('ro').textContent=j.text}
+ catch(_){loadCaptcha('<p style="color:#c2410c;margin-bottom:10px">সংযোগ ব্যর্থ হয়েছে।</p>')}}
+g('rf').onsubmit=e=>{e.preventDefault();res.style.display='block';PROXY_URL?loadCaptcha():manual()};
+
+// embed
+document.querySelectorAll('.tbs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tbs button').forEach(x=>x.classList.remove('on'));b.classList.add('on');const u=b.dataset.u;document.getElementById('fm').src=u;document.getElementById('au').textContent=u.replace(/^https?:\/\/(www\.)?/,'').replace(/\/$/,'');document.getElementById('op').href=document.getElementById('op2').href=u});
+document.getElementById('rl').onclick=()=>{const f=document.getElementById('fm'),u=f.src;f.src='about:blank';setTimeout(()=>f.src=u,50)};
+</script></body></html>
